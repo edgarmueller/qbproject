@@ -154,8 +154,8 @@ class QBSchemaOps extends QBBaseSchemaOps {
     def isSubSetOf(otherSchema: QBClass): Boolean =
       isSubSet(schema, otherSchema)
 
-    def adapt[A](adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] =
-      adaptSchema(schema, JsPath(), adapter)
+//    def adapt[A](adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] =
+//      adaptSchema(schema, JsPath(), adapter)
   }
 }
 

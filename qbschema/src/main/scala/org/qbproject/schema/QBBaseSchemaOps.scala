@@ -141,18 +141,17 @@ trait QBBaseSchemaOps {
 //      case q => Tree.leaf(modifier(q))
 //    }
 //  }
-
-  def adaptSchema[A](schema: QBType, path: JsPath, adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] = {
-    schema match {
-      case obj: QBClass =>
-        val fields = obj.attributes.map(fd => fd.name -> adaptSchema(fd.qbType, path \ fd.name, adapter))
-          JsSuccess(JsObject(fields.collect {
-            case (fieldName, JsSuccess(res, _)) if !res.isInstanceOf[JsUndefined] =>
-              (fieldName, res)
-          }))
-      case q => adapter(path, q)
-    }
-  }
+//  def adaptSchema[A](schema: QBType, path: JsPath, adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] = {
+//    schema match {
+//      case obj: QBClass =>
+//        val fields = obj.attributes.map(fd => fd.name -> adaptSchema(fd.qbType, path \ fd.name, adapter))
+//          JsSuccess(JsObject(fields.collect {
+//            case (fieldName, JsSuccess(res, _)) if !res.isInstanceOf[JsUndefined] =>
+//              (fieldName, res)
+//          }))
+//      case q => adapter(path, q)
+//    }
+//  }
 
   def foldAttributesByType[A <: QBType : ClassTag, B](obj: QBClass, result: Seq[B])(modifier: QBAttribute => B): Seq[B] = {
     val clazz = implicitly[ClassTag[A]].runtimeClass
