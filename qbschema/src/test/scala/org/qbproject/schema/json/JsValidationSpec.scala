@@ -59,6 +59,7 @@ object JsValidationSpec extends Specification {
       QBValidator.validate(schema)(instance).asOpt.get \ "d" must beEqualTo(JsNumber(42))
     }
 
+
     "test optional base type without default" in {
       val schema = qbClass(
         "o" -> qbString,
@@ -324,6 +325,17 @@ object JsValidationSpec extends Specification {
       QBValidator.validate(schema)(instance).asOpt must beSome
     }
 
+    "test tolerant numbers conversion with boundaries" in {
+      val schema = qbClass(List(
+        "i" -> qbInteger,
+        "j" -> qbNumber(min(0.0001), max(1000))))
+      val instance = Json.obj(
+        "i" -> 9,
+        "j" -> "10")
+      val validatedInstance = QBValidator.validate(schema)(instance).asOpt
+      validatedInstance must beSome.which(i => (i \ "j").as[Double] == 10d)
+    }
+
     "test tolerant integer conversion" in {
       val schema = qbClass(List(
         "i" -> qbInteger,
@@ -331,7 +343,8 @@ object JsValidationSpec extends Specification {
       val instance = Json.obj(
         "i" -> 9,
         "j" -> "10")
-      QBValidator.validate(schema)(instance).asOpt must beSome
+      val validatedInstance = QBValidator.validate(schema)(instance).asOpt
+      validatedInstance must beSome.which(i => (i \ "j").as[Double] == 10d)
     }
 
     "test error case when tolerant number conversion gets non valid number" in {
