@@ -1,6 +1,7 @@
 package org.qbproject.api.routing
 
 import play.api.mvc.RequestHeader
+import scala.collection.mutable.ListBuffer
 
 object QBRouterUtil {
 
@@ -22,10 +23,36 @@ object QBRouterUtil {
   }
 
   /**
-   * Prefixes all given path with the given prefix.
+   * Joins parts of a URL path to one path.
+   *
+   * @param pathParts
    */
-  object namespace {
-    def apply(prefix: String)(routes: => List[QBRoute]): List[QBRoute] = routes.map(r => r.copy(path = prefix + r.path))
+  def joinPaths(pathParts: String*): String = {
+    pathParts.map(_.trim).filterNot(_ == "")
+      .foldLeft("")((url, next) => {
+        val priorHasSlash = url.endsWith("/")
+        val nextHasSlash = next.startsWith("/")
+
+        (priorHasSlash, nextHasSlash) match {
+          case (true, false) => url + next
+          case (false, true) => url + next
+          case (true, true) => url + next.substring(1)
+          case (false, false) => url + "/" + next
+        }
+      })
   }
 
+  trait RouteCollector {
+    def addAndReturn[R <: QBRoute](route: R): R
+  }
+  case object VoidCollector extends RouteCollector {
+    def addAndReturn[R <: QBRoute](route: R): R = route
+  }
+  case class QBRouteCollector(routes: ListBuffer[QBRoute] = ListBuffer()) extends RouteCollector {
+    def addAndReturn[R <: QBRoute](route: R): R = {
+      routes.append(route)
+      route
+    }
+    def toRouter: QBRouter = QBRouter(routes: _*)
+  }
 }

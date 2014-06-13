@@ -1,6 +1,6 @@
 package org.qbproject.api.routing
 
-import play.api.mvc.{RequestHeader, Handler}
+import play.api.mvc.{ RequestHeader, Handler }
 
 /**
  *
@@ -37,5 +37,7 @@ trait QBRoute {
    * @return the handler, if any
    */
   def getHandler(namespace: String, requestHeader: RequestHeader): Option[Handler]
+
+  def documentation: (String, String, String) = ("", path, "")
 
 }

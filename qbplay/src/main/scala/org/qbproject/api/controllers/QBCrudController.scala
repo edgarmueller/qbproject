@@ -3,9 +3,9 @@ package org.qbproject.api.controllers
 import play.api.mvc.Action
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
+import org.qbproject.api.routing.QBRouterDSL._
 import org.qbproject.api.routing.QBRoute
-import org.qbproject.api.routing.QBRoutes._
-import org.qbproject.api.mongo.{QBCollectionValidation, QBMongoCollection}
+import org.qbproject.api.mongo.{ QBCollectionValidation, QBMongoCollection }
 
 trait QBCrudController extends QBAPIController { self =>
 
@@ -16,17 +16,16 @@ trait QBCrudController extends QBAPIController { self =>
   def updateSchema = collection.schema
 
   // Routes --
-  def getAllRoute =  GET  / "all" -> getAll
-  def getByIdRoute = GET  / "get" -> getById _
-  def createRoute =  POST / "create" -> create
-  def updateRoute =  GET  / "update" -> update _
+  def getAllRoute =  GET    / ?             to getAll
+  def getByIdRoute = GET    /  string       to getById
+  def createRoute =  POST   / ?             to create
+  def updateRoute =  POST   /  string       to update 
 
-  def crudRoutes : List[QBRoute] = List(
+  def crudRoutes: List[QBRoute] = List(
     getAllRoute,
     getByIdRoute,
     createRoute,
-    updateRoute
-  )
+    updateRoute)
 
   // --
 
@@ -55,12 +54,7 @@ trait QBCrudController extends QBAPIController { self =>
     }
   }
 
-  def beforeUpdate(jsValue: JsValue): JsValue = jsValue
-
   def beforeCreate(jsValue: JsValue): JsValue = jsValue
-
-  def afterUpdate(jsObject: JsObject): JsObject = jsObject
-
   def afterCreate(jsObject: JsObject): JsObject = jsObject
 
   def create = JsonHeaders {
@@ -71,6 +65,9 @@ trait QBCrudController extends QBAPIController { self =>
       }
     }
   }
+
+  def beforeUpdate(jsValue: JsValue): JsValue = jsValue
+  def afterUpdate(jsObject: JsObject): JsObject = jsObject
 
   def update(id: String) = JsonHeaders {
     ValidatingAction(updateSchema, beforeUpdate).async { request =>

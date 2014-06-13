@@ -20,7 +20,10 @@ class QBMongoCollection(collectionName: String)(db: DB) {
 
   type ID = String
 
-  lazy val collection = db.collection[JSONCollection](collectionName)
+  private lazy val collection = db.collection[JSONCollection](collectionName)
+  
+  /** Perform a raw command on the underlying mongocollection */
+  def rawCollection = collection
 
   def getCount = db.command(Count(collectionName))
 
@@ -83,8 +86,6 @@ class QBMongoCollection(collectionName: String)(db: DB) {
     }
   }
 
-  /** Perform a raw command on the underlying mongocollection */
-  def rawCollection = collection
 
   // ---
 

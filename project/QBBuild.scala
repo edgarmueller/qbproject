@@ -7,12 +7,11 @@ import scoverage.ScoverageSbtPlugin
 
 object QBBuild extends Build {
 
-  val QBVersion = "0.3"
+  val QBVersion = "0.4.0-SNAPSHOT"
 
   val QBRepositories = Seq(
     "Typesafe repository"     at "http://repo.typesafe.com/typesafe/releases/",
     "mandubian maven bintray" at "http://dl.bintray.com/mandubian/maven",
-    "teamon.eu repo"          at "http://repo.teamon.eu",
     "Sonatype OSS Snapshots"  at "https://oss.sonatype.org/content/repositories/snapshots",
     "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/tree/master/releases"
   )
@@ -63,10 +62,11 @@ object QBBuild extends Build {
       retrieveManaged := true,
       libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play"                % "2.2.3",
+        "com.typesafe.play" %% "play-test"           % "2.2.3"    % "test",
         "com.mandubian"     %% "play-json-zipper"    % "1.1",
-        "com.github.axel22" %% "scalameter"          % "0.4",
         "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
-        "org.specs2"        %% "specs2" % "2.3.7"    % "test"
+        "com.github.axel22" %% "scalameter"          % "0.4"      % "test",
+        "org.specs2"        %% "specs2"              % "2.3.7"    % "test"
       ),
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     ).dependsOn(schemaProject)
@@ -78,8 +78,8 @@ object QBBuild extends Build {
       retrieveManaged := true,
       libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play-json"           % "2.2.3",
-        "net.sf.opencsv"    %  "opencsv"              % "2.1",
-        "org.specs2"        %% "specs2" % "2.3.7"    % "test",
+        "net.sf.opencsv"    %  "opencsv"             % "2.1",
+        "org.specs2"        %% "specs2"              % "2.3.7"    % "test",
         "org.scalaz"        %% "scalaz-core"         % "7.0.5"
       )
     ).dependsOn(schemaProject)

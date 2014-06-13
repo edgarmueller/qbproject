@@ -1,12 +1,15 @@
 *.class
 *.log
+.DS_Store
 
 # sbt specific
 .cache/
 .history/
 .lib/
+.target/
 dist/*
 target/
+.target/
 lib_managed/
 src_managed/
 project/boot/
@@ -19,6 +22,7 @@ project/plugins/project/
 .classpath
 .project
 .metadata
+.cache
 
 # IntelliJ
 .idea
