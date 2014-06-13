@@ -17,7 +17,7 @@ package object csv {
   implicit def resource(resourceIdentifier: String, joinKeys: JoinKeySpec): ResourceReference =
     ResourceReference(resourceIdentifier, joinKeys)
 
-  implicit def toPathSpec(specs: Seq[(String, PartialFunction[Any, JsValue])]): Seq[(PathSpec, PartialFunction[Any, JsValue])] = {
+  implicit def toPathSpec(specs: (String, Any => JsValue)*): Seq[(PathSpec, Any => JsValue)] = {
     specs.map { spec =>
       if (spec._1.contains("$")) {
         val splitted = spec._1.split('$').toList
@@ -38,6 +38,12 @@ package object csv {
   implicit class MappedPathStringExtensions(str: String) {
   // TODO: extract constant
     def maps(otherString: String): String = str + "$" + otherString
+    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) =  if (str.contains("$")) {
+        val splitted = str.split('$').toList
+        MappedPath(splitted.head, splitted.last) -> pf
+      } else {
+        Path(str) -> pf
+      }
   }
 
   case class MappedPathString(str: String, otherString: String)

@@ -11,7 +11,7 @@ import org.qbproject.api.csv.DefaultArrayPathBuilder
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 
-  override def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath)(implicit root: CSVRow): JsResult[JsValue] = {
+  override def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: CSVRow): JsResult[JsValue] = {
     fromTryCatch({
       schema match {
         case str: QBString =>
@@ -26,23 +26,41 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
         case int: QBInteger => JsNumber(asDouble(path))
         case num: QBNumber => JsNumber(asDouble(path))
       }
-    }).fold(t => JsError(path, t.getMessage), JsSuccess(_))
+    }).fold(throwable => {
+      // check optionals and defaults
+      annotations.collectFirst { case optional: QBOptionalAnnotation =>
+        optional.fallBack
+      }.fold[JsResult[JsValue]] {
+        annotations.collectFirst {
+          case default: QBDefaultAnnotation => default
+        }.fold[JsResult[JsValue]] {
+          JsError(path, throwable.getMessage)
+        } {
+          default => JsSuccess(default.value)
+        }
+      } { possibleFallBack =>
+        JsSuccess(possibleFallBack.fold[JsValue] {
+          JsUndefined("")
+        } {
+          identity
+        })
+      }
+    }, JsSuccess(_))
   }
 
-  override def atArray(schema: QBArray, path: JsPath)(implicit root: CSVRow): JsResult[JsValue] = {
-    val stringPath = path.toString.substring(1)
-    root.headers.find(_.contains(stringPath))
+  override def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: CSVRow): JsResult[JsValue] = {
+    val csvHeader = path.toString.substring(1).replace("/", ".")
+    root.headers.find(_.contains(csvHeader))
       .map(matchedHeader => root.headers.indexOf(matchedHeader))
       .fold [JsResult[JsValue]] {
-      JsError("Could not find column " + stringPath + ".")
+      JsError("Could not find column " + csvHeader + ".")
     } { startIndex =>
-      val matchingHeaders = root.headers.drop(startIndex).takeWhile { _.startsWith(stringPath) }
+      val matchingHeaders = root.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
       val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(root)
       val qbType = schema.items
-      //    qbType match {
-      //      case _: QBPrimitiveType[_] =>
+
       val childElements = (0 until strList.size).map {
-        idx => convert (qbType, path(idx))
+        idx => convert (qbType, path(idx), Seq.empty)
       }
 
       if (! childElements.exists (_.asOpt.isEmpty) ) {
@@ -50,28 +68,25 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
           case (JsSuccess (s, p) ) => s
         }))
       } else {
-        // TODO: clarify what to do in an error case
         JsError(childElements.collect{
           case JsError(err) => err }.reduceLeft(_ ++ _))
       }
-      //      case _: QBClass =>
-      // TODO: hack, we could infer the types here, actually, the CSV resolver should be able to handle this
-      // with a schema
-      //        JsSuccess(JsArray(strList.map(JsString(_))))
-      //    }
     }
 
   }
+
 
   def pathExists(path: JsPath)(implicit root: CSVRow): Boolean = Try {
     getColumnData(path)(filter(path))
   }.map(_ != "").getOrElse(false)
 
-  // ---
-
   def filter[A](path: String)(implicit row: CSVRow): CSVRow = row
 
-  implicit def resolvePath(path: JsPath): String = {
+  implicit def toCSVPath(path: JsPath): String = resolvePath(path)
+
+  // TODO: only called atPrimitive, could be inlined
+  // note this conforms with default split strategy
+  def resolvePath(path: JsPath): String = {
     path.path.foldLeft("")((stringPath, nextNode) => {
       nextNode match {
         case k: KeyPathNode => if (stringPath == "") k.key else stringPath + "." + k.key

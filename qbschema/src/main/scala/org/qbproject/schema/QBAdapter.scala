@@ -7,27 +7,27 @@ trait QBAdapter[I] {
 
   type PathBuilder = I => JsValue
 
-  def adapt(schema: QBClass)(root: I): JsResult[JsValue] = atObject(schema, JsPath())(root)
+  def adapt(schema: QBClass)(root: I): JsResult[JsValue] = atObject(schema, JsPath(), Seq.empty)(root)
 
   def pathBuilders: Map[String, PathBuilder] = Map.empty
 
-  def convert(qbType: QBType, path: JsPath)(implicit root: I): JsResult[JsValue] = {
-    val stringPath = stripOffSlash(path)
-    pathBuilders.get(stringPath).fold {
+  def convert(qbType: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
+    pathBuilders.get(resolvePath(path)).fold {
       qbType match {
-        case arr: QBArray => atArray(arr, path)
-        case obj: QBClass => atObject(obj, path)
-        case schema: QBPrimitiveType[_] => atPrimitive(schema, path)
+        case arr: QBArray => atArray(arr, path, annotations)
+        case obj: QBClass => atObject(obj, path, annotations)
+        case schema: QBPrimitiveType[_] => atPrimitive(schema, path, annotations)
       }
     } {
       builder => JsSuccess(builder(root))
     }
   }
 
-  def atObject[A](schema: QBType, path: JsPath)(implicit root: I): JsResult[JsValue] = {
+  def atObject[A](schema: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
     schema match {
       case obj: QBClass =>
-        val fields = obj.attributes.map(fd => fd.name -> convert(fd.qbType, path \ fd.name))
+        val fields = obj.attributes.map(attr => attr.name -> convert(attr.qbType, path \ attr.name, attr.annotations))
+
         // TODO: duplicate code, we have this somewhere in the core, too
         if (fields.exists(_._2.asOpt.isEmpty)) {
           JsError(fields.collect { case (p, JsError(err)) => err }.reduceLeft(_ ++ _))
@@ -37,14 +37,15 @@ trait QBAdapter[I] {
               (fieldName, res)
           }))
         }
-      case q => convert(q, path)
+      case q => convert(q, path, Seq.empty)
     }
   }
 
-  def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath)(implicit root: I): JsResult[JsValue]
+  def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue]
 
-  def atArray(schema: QBArray, path: JsPath)(implicit root: I): JsResult[JsValue]
+  def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue]
 
-  private def stripOffSlash(path: JsPath): String = path.toString().substring(1)
+  // note this conforms with default split strategy
+  def resolvePath(path: JsPath): String
 
 }

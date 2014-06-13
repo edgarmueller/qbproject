@@ -26,7 +26,7 @@ object CSVColumnUtil {
        val index = headers.indexOf(colName)
 
        if (index == -1) {
-         throw new RuntimeException("column: " + colName + " not found in " + headers)
+         throw new RuntimeException("column: " + colName + " not found.") // in " + headers)
        }
 
        row(index).trim

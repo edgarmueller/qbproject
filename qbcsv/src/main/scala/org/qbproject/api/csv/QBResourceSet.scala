@@ -7,6 +7,7 @@ case class QBResource(identifier: String, inputStream: InputStream) {
 
   def close = inputStream.close()
 
+  override def toString = identifier
 }
 
 /**

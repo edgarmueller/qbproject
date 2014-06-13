@@ -18,10 +18,10 @@ import play.api.data.validation.ValidationError
 
 object CSVAdapter {
 
-  def apply(pathConstructors: (PathSpec, PartialFunction[Any, JsValue])*) =
+  def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
     new CSVAdapter(toPathBuilders(pathConstructors))
 
-  def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, PartialFunction[Any, JsValue])]): Map[String, CSVRow => JsValue] = {
+  def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, CSVRow => JsValue] = {
     pathBuilderSpecs.map { pathBuilderSpec =>
       pathBuilderSpec._1.schemaPath -> {
         row: CSVRow =>
@@ -45,10 +45,12 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
     parser.parse(resource, ';', '"')
   }
 
-  def parse(mainResourceIdentifier: String, schema: QBClass)(resourceMapping: (String, ResourceReference)*)(provider: QBResourceSet): JsResult[List[JsValue]] = {
-    parseResources(mainResourceIdentifier, schema)(resourceMapping.foldLeft[ResourceMapping](ResourceMapping())((mapping, attrWithRef) => {
+  def parse(mainResourceIdentifier: String, schema: QBClass)(resourceMapping: (String, ResourceReference)*)(resourceSet: QBResourceSet): JsResult[List[JsValue]] = {
+    val result = parseResources(mainResourceIdentifier, schema)(resourceMapping.foldLeft[ResourceMapping](ResourceMapping())((mapping, attrWithRef) => {
       mapping.+((attrWithRef._1, attrWithRef._2))
-    }))(provider)
+    }))(resourceSet)
+    resourceSet.close
+    result
   }
 
   /**
@@ -145,10 +147,25 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
           }
         }.map(_.asInstanceOf[JsObject] - joinData.keys.foreignKey) match {
           case Nil  => jsObject
-          case data => jsObject.deepMerge(Json.obj(joinData.attributeName -> data))
+          case data => {
+            val attributePath = joinData.attributeName.split('.').toList
+            if (attributePath.size > 1) {
+              deepJoin(jsObject, attributePath, data)
+            } else {
+              jsObject.deepMerge(Json.obj(joinData.attributeName -> data))
+            }
+          }
         }
       }
     })
+  }
+
+  def deepJoin(jsObject: JsObject, pathToAttribute: List[String], data: List[JsObject]): JsObject = {
+    pathToAttribute match {
+      case attr::Nil => jsObject.deepMerge(Json.obj(attr -> data))
+        // TODO: cast
+      case attr::path => jsObject.deepMerge(Json.obj(attr -> deepJoin((jsObject \ attr).asInstanceOf[JsObject], path, data)))
+    }
   }
 
   // TODO: review joinKeys parameters, seems ugly
