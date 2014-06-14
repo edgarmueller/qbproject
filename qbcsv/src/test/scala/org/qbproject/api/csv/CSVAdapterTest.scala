@@ -262,8 +262,6 @@ object CSVAdapterTest extends Specification {
           "products" -> resource("products.csv", "id" <-> "id".splitKey)
         )(resourceSet)
 
-      resourceSet.close
-
       result.get(0) must beEqualTo(
         Json.obj(
           "id" -> 1.0,
@@ -362,8 +360,6 @@ object CSVAdapterTest extends Specification {
           "features" -> resource("features.csv", "id")
       )(resourceSet)
 
-      resourceSet.close
-
       println(result)
 
       val bla = result.asInstanceOf[JsError].errors.map { pathWithError =>
@@ -419,8 +415,74 @@ object CSVAdapterTest extends Specification {
       )
     }
 
-    "TODO: split arrays" in {
+    "TODO: inner join with validation " in {
 
+      val companyResource = QBResource("companies.csv", mkInputStream(Data.basic.companyData))
+      val featureResource = QBResource("products.csv", mkInputStream(Data.basic.productData))
+      val resourceSet = QBResourceSet(companyResource, featureResource)
+
+
+      val companySchema = qbClass(
+        "id" -> qbInteger,
+        "company" -> Schemas.basic.companyCoreSchema,
+        "products" -> qbClass(
+          "options" -> qbList(Schemas.basic.productSchema)
+        )
+      )
+
+      val result = CSVValidator().parse("companies.csv", companySchema)(
+        "products.options" -> resource("products.csv", "id")
+      )(resourceSet)
+
+      result.get(0) must beEqualTo(Json.obj(
+        "id" -> 1.0,
+        "company" -> Json.obj(
+          "name" -> "Dude GmbH",
+          "openHours" -> "14-18"
+        ),
+        "products" -> Json.obj(
+          "options" -> Json.arr(
+            Json.obj(
+              "name" -> "Beer",
+              "price" -> 5.0
+            ),
+            Json.obj(
+              "name" -> "Pizza",
+              "price" -> 8.0
+            )
+          )
+        )
+      )
+      )
+    }
+
+    "TODO: inner join with validation violation " in {
+
+      val companyResource = QBResource("companies.csv", mkInputStream(Data.basic.companyData))
+      val featureResource = QBResource("products.csv", mkInputStream(Data.basic.productData))
+      val resourceSet = QBResourceSet(companyResource, featureResource)
+
+      val productSchema = qbClass(
+        "name" -> qbString,
+        "price" -> qbNumber(range(10, 99))
+      )
+
+      val companySchema = qbClass(
+        "id" -> qbInteger,
+        "company" -> Schemas.basic.companyCoreSchema,
+        "products" -> qbClass(
+          "options" -> qbList(productSchema)
+        )
+      )
+
+      val result = CSVValidator().parse("companies.csv", companySchema)(
+        "products.options" -> resource("products.csv", "id")
+      )(resourceSet)
+
+      result must beAnInstanceOf[JsError]
+    }
+
+    "TODO: split arrays" in {
 
       val companyData = """id;company.name;company.openHours;products.colors
             1;Dude GmbH;14-18;brown,red

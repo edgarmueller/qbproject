@@ -1,9 +1,6 @@
 package org.qbproject.api.csv
 
-import org.qbproject.api.csv.CSVColumnUtil.CSVRow
-import java.io.InputStream
 import play.api.libs.json._
-import scala.util.Success
 import org.qbproject.csv._
 import org.qbproject.api.schema._
 import org.qbproject.api.schema.QBSchema.{resolvePath => qbSchemaResolvePath, _}
@@ -11,17 +8,15 @@ import org.qbproject.csv.ResourceReference
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsSuccess
 import org.qbproject.csv.ResourceMapping
-import scala.util.Success
 import play.api.libs.json.JsObject
 import org.qbproject.api.csv.CSVColumnUtil.CSVRow
-import play.api.data.validation.ValidationError
 
 object CSVAdapter {
 
   def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
     new CSVAdapter(toPathBuilders(pathConstructors))
 
-  def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, CSVRow => JsValue] = {
+  private[csv] def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, CSVRow => JsValue] = {
     pathBuilderSpecs.map { pathBuilderSpec =>
       pathBuilderSpec._1.schemaPath -> {
         row: CSVRow =>
@@ -40,8 +35,8 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
     _pathBuilders.toMap
   }
 
-  def parse(schema: QBType, resource: QBResource, joinKeys: Set[SplitForeignJoinKey] = Set.empty): List[JsResult[JsValue]] = {
-    val parser = new CSVAdaptRowUtil(row => adapt(schema.asInstanceOf[QBClass])(row), joinKeys)
+  def parse(schema: QBClass, resource: QBResource, joinKeys: Set[SplitForeignJoinKey] = Set.empty): List[JsResult[JsValue]] = {
+    val parser = new CSVAdaptRowUtil(row => adapt(schema)(row), joinKeys)
     parser.parse(resource, ';', '"')
   }
 
@@ -59,22 +54,23 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
    * @param resourceMapping
    * @return
    */
-  def injectJoinKeys(schema: QBClass, resourceMapping: ResourceMapping): Map[QBType, String] = {
-    // TODO: exception
+  def injectJoinKeys(schema: QBClass, resourceMapping: ResourceMapping): Map[QBClass, String] = {
+    // TODO: exception & casts
     resourceMapping.all.map { entry =>
       val attr = entry._1
       val (key, foreignKey) = entry._2.joinKeys.toTuple
       (schema.follow[QBType](attr) match {
-        case cls: QBClass =>
-          cls ++ (foreignKey ->  schema.follow[QBType](key))
-        case arr: QBArray =>
-          if (arr.items.asInstanceOf[QBClass].attributes.map(_.name).contains(foreignKey)) {
+        case qbClass: QBClass =>
+          qbClass ++ (foreignKey ->  schema.follow[QBType](key))
+        case qbArray: QBArray =>
+          if (qbArray.items.asInstanceOf[QBClass].attributes.map(_.name).contains(foreignKey)) {
             // join key already in array contained type
-            arr.items
+            qbArray.items
           } else {
             // assumes array contains a class, where we can mix in the join key
-            arr.items match {
-              case cls: QBClass => cls ++
+            qbArray.items match {
+                // return class contained in arrat as schema mapping
+              case qbClass: QBClass => qbClass ++
                 (foreignKey ->  schema.asInstanceOf[QBClass].follow[QBType](key))
               case _ =>
                 throw new RuntimeException(s"Join key $foreignKey can not be mixed into " +
@@ -85,10 +81,10 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
           throw new RuntimeException(s"Join key $foreignKey can not be mixed into " +
             s"primitive type.")
       }) -> entry._2.resourceIdentifier
-    }.toMap
+    }.asInstanceOf[Map[QBClass, String]]
   }
 
-  def buildForeignSchemaMappings(schema: QBClass, resourceMapping: ResourceMapping, foreignResources: List[QBResource]): List[(QBType, QBResource)] = {
+  def buildForeignSchemaMappings(schema: QBClass, resourceMapping: ResourceMapping, foreignResources: List[QBResource]): List[(QBClass, QBResource)] = {
     injectJoinKeys(schema, resourceMapping).map(m =>
       m._1 -> foreignResources.map(r => r.identifier -> r).toMap.get(m._2).get
     ).toList
@@ -102,11 +98,11 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
       case a@(_, joinKey) if !joinKey.isInstanceOf[SplitJoinKey] => a
     }.map(_._1).toSeq:_*)
 
-    val joinedResults = for {
+    for {
       resolvedResource <- provider.get(mainResourceIdentifier)
       resolvedForeignResources <- sequenceJsResults[QBResource](resourceMapping.resourceIdentifiers.map(provider.get))
       results <- parseAll(
-        // TODO
+        // TODO ugly
         (updatedSchema, resolvedResource) :: buildForeignSchemaMappings(schema, resourceMapping, resolvedForeignResources),
         attributesToJoinKeys.map(_._2).filter(_.isInstanceOf[SplitForeignJoinKey]).asInstanceOf[List[SplitForeignJoinKey]]
       ).map { parsedResults =>
@@ -118,20 +114,11 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
         fold(parsedResults.head, joinData)
       }
     } yield results
-
-    // TODO: perform validation?
-    joinedResults
-//    joinedResults.flatMap { results =>
-//      val validated  = results.map(obj => QBValidator.validate(schema)(obj.asInstanceOf[JsObject]))
-//      sequenceJsResults(validated)
-//    }
   }
 
-  /**
-   * WIP
-   */
+
   // TODO: casts
-  def fold(initData: List[JsValue], foreignData: List[JoinData]): List[JsValue] = {
+  private def fold(initData: List[JsValue], foreignData: List[JoinData]): List[JsValue] = {
 
     foreignData.foldLeft(initData)((objects, joinData) => {
       objects.map {obj =>
@@ -169,7 +156,7 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
   }
 
   // TODO: review joinKeys parameters, seems ugly
-  def parseAll(resources: List[(QBType, QBResource)], joinKeys: List[SplitForeignJoinKey]): JsResult[List[List[JsValue]]] = {
+  def parseAll(resources: List[(QBClass, QBResource)], joinKeys: List[SplitForeignJoinKey]): JsResult[List[List[JsValue]]] = {
     val results = for {
       (qbType, resource) <- resources
     } yield {
@@ -180,7 +167,7 @@ class CSVAdapter(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVSchem
   }
 
   // TODO: duplicate code, we have this somewhere in the core, too
-  private def sequenceJsResults[A](contents: List[JsResult[A]]): JsResult[List[A]] = {
+  protected def sequenceJsResults[A](contents: List[JsResult[A]]): JsResult[List[A]] = {
     if (!contents.exists(_.asOpt.isEmpty)) {
       JsSuccess(contents.collect { case JsSuccess(result, _) => result })
     } else {

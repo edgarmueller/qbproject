@@ -1,7 +1,8 @@
-package org.qbproject.api.csv
+package org.qbproject.csv
 
 import play.api.libs.json.JsValue
 import org.qbproject.api.csv.CSVColumnUtil.CSVRow
+import org.qbproject.api.csv.CSVColumnUtil
 
 class DefaultArrayPathBuilder(val header: String, builder: => (List[String]) => JsValue) extends (CSVRow => JsValue) {
 

@@ -5,9 +5,8 @@ import scalaz.Validation.fromTryCatch
 import scala.util.Try
 import org.qbproject.schema._
 import org.qbproject.api.schema._
-import org.qbproject.api.csv.{CSVColumnUtil, DefaultArrayPathBuilder}
+import org.qbproject.api.csv.CSVColumnUtil
 import CSVColumnUtil._
-import org.qbproject.api.csv.DefaultArrayPathBuilder
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 

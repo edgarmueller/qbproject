@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 import org.qbproject.csv.{Path, CSVSchemaAdapter}
 
 @RunWith(classOf[JUnitRunner])
-class CSVValidatorTest extends Specification {
+class CSVParserTest extends Specification {
 
   val testSchema = qbClass(
     "id" -> qbString,

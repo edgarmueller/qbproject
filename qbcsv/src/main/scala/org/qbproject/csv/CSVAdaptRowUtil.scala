@@ -1,13 +1,13 @@
-package org.qbproject.api.csv
+package org.qbproject.csv
 
 import org.qbproject.api.csv.CSVColumnUtil.CSVRow
-import org.qbproject.csv.{CSVErrorInfo, SplitForeignJoinKey}
 import play.api.libs.json.{JsPath, JsSuccess, JsError, JsResult}
 import java.io.InputStreamReader
 import au.com.bytecode.opencsv.CSVReader
 import scala.util.{Try, Failure}
 import play.api.data.validation.ValidationError
 import scala.collection.JavaConversions._
+import org.qbproject.api.csv.{QBResource, CSVColumnUtil}
 
 class CSVAdaptRowUtil[A <: Any](
    factory: CSVRow => JsResult[A], joinKeys: Set[SplitForeignJoinKey] = Set.empty) extends CSVColumnUtil(factory) {
@@ -16,7 +16,6 @@ class CSVAdaptRowUtil[A <: Any](
     joinKeys.map(_.foreignKey).contains(header)
   }
 
-  // TODO: refactor splitting
   def parse(resource: QBResource, separator: Char, quoteChar: Char): List[JsResult[A]] = {
     val reader = new CSVReader(new InputStreamReader(resource.inputStream, "utf-8"), separator, quoteChar)
     val (headers :: rawRows) = reader.readAll().toList.map(_.map(_.trim).toList)
