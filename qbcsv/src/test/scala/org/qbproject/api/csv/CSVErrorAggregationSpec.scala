@@ -101,10 +101,6 @@ class CSVErrorAggregationSpec extends Specification {
 
       println(QBCSVErrorMap(result.asInstanceOf[JsError]).prettyPrint)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> ae38ff3fb515c86cf59e632bef0b11820ae1e9f8
       true must beTrue
     }
   }
