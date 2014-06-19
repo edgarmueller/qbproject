@@ -95,7 +95,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    * @return a JsResult containing a result of type O
    */
   def process(schema: QBType, path: QBPath, input: JsValue): JsResult[O] = {
-    typeProcessors.get(schema.getClass).fold[JsResult[JsValue]] { JsSuccess(input) } {
+    getTypeProcessor(schema).fold[JsResult[JsValue]] { JsSuccess(input) } {
       _.process(schema, input, path)
     }.flatMap { value =>
       (schema, value) match {
@@ -111,6 +111,12 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
           + "[expected: " + schema.toString
           +     ", was: " + QBSchemaUtil.mapJsValueToTypeName(input) + "]")
       }
+    }
+  }
+
+  private def getTypeProcessor(qbType: QBType): Option[TypeProcessor] = {
+    qbType.getClass().getInterfaces().collectFirst { case interface if typeProcessors.contains(interface) =>
+      typeProcessors.get(interface).get
     }
   }
 

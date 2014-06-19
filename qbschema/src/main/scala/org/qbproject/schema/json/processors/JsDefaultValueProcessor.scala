@@ -21,9 +21,9 @@ trait JsDefaultValueProcessor extends JsValueProcessor[JsValue] { self: Visitor[
     val numberConverter = new JsStringToNumberTypeProcessor()
     val booleanConverter = new JsStringToBooleanTypeProcessor()
     Map(
-      classOf[QBNumberImpl] -> numberConverter,
-      classOf[QBIntegerImpl] -> numberConverter,
-      classOf[QBBooleanImpl] -> booleanConverter
+      classOf[QBNumber] -> numberConverter,
+      classOf[QBInteger] -> numberConverter,
+      classOf[QBBoolean] -> booleanConverter
     )
   }
 }

@@ -5,11 +5,15 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json._
 import org.qbproject.schema._
-import org.qbproject.api.schema.{QBClass, QBPartialValidator, QBValidator, QBSchema}
+import org.qbproject.api.schema._
 import QBSchema._
 import scala.math.BigDecimal.int2bigDecimal
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import scala.Some
+import play.api.libs.json.JsNumber
 
 @RunWith(classOf[JUnitRunner])
 object JsValidationSpec extends Specification {
@@ -345,6 +349,31 @@ object JsValidationSpec extends Specification {
         "j" -> "10")
       val validatedInstance = QBValidator.validate(schema)(instance).asOpt
       validatedInstance must beSome.which(i => (i \ "j").as[Double] == 10d)
+    }
+
+    "test tolerant integer conversion with custom number type" in {
+      case class CustomInt(val rules: Set[ValidationRule[JsNumber]] = Set.empty) extends QBNumber
+      def customInt = new CustomInt()
+      val schema = qbClass(List(
+        "i" -> qbInteger,
+        "j" -> customInt))
+      val instance = Json.obj(
+        "i" -> 9,
+        "j" -> "10")
+      val validatedInstance = QBValidator.validate(schema)(instance).asOpt
+      validatedInstance must beSome.which(i => (i \ "j").as[Double] == 10d)
+    }
+
+    "test tolerant integer conversion within list" in {
+      val schema = qbClass(List(
+        "i" -> qbInteger,
+        "j" -> qbList(qbInteger)))
+      val instance = Json.obj(
+        "i" -> 9,
+        "j" -> Json.arr("10")
+      )
+      val validatedInstance = QBValidator.validate(schema)(instance).asOpt
+      validatedInstance must beSome.which(i => (i \ "j")(0).as[Double] == 10d)
     }
 
     "test error case when tolerant number conversion gets non valid number" in {
