@@ -4,13 +4,6 @@ import org.qbproject.schema._
 import play.api.libs.json._
 import scalaz.Validation.fromTryCatch
 import org.qbproject.api.schema._
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsObject
 
 /**
  * <p>
@@ -97,7 +90,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
   def process(schema: QBType, path: QBPath, input: JsValue): JsResult[O] = {
     getTypeProcessor(schema).fold[JsResult[JsValue]] { JsSuccess(input) } {
       _.process(schema, input, path)
-    }.flatMap { value =>
+    }.flatMap[O] { value =>
       (schema, value) match {
         case (qbString: QBString,  jsString: JsString)  => processString(qbString, path, jsString)
         case (qbObject: QBClass,  jsObject: JsObject)  => processObject(qbObject, path, jsObject)
