@@ -1,27 +1,23 @@
 package org.qbproject.api.csv
 
 import java.io.{InputStreamReader, InputStream}
-import scala.util.{Failure, Success, Try}
-import org.qbproject.api.csv.CSVColumnUtil.{CSVException, CSVRow}
+import scala.util.{Success, Try}
+import org.qbproject.api.csv.CSVColumnUtil.CSVException
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import au.com.bytecode.opencsv.CSVReader
 import scala.collection.JavaConversions._
 import play.api.libs.json._
-import org.qbproject.csv.SplitForeignJoinKey
-import play.api.libs.json.JsSuccess
 import scala.util.Failure
 import scala.Some
-import org.qbproject.csv.SplitForeignJoinKey
 import org.qbproject.api.csv.CSVColumnUtil.CSVRow
-import play.api.data.validation.ValidationError
 
 
 object CSVColumnUtil {
 
    def apply[A <: AnyRef](factory: CSVRow => JsResult[A]) = new CSVColumnUtil(factory)
 
-   case class CSVRow(row: List[String], headers: List[String]) {
+   case class CSVRow(row: List[String], headers: List[String], resourceIdentifier: String = "", rowNr: Int = -1) {
      def getColumnData(colName: String): String = {
        val index = headers.indexOf(colName)
 
@@ -36,12 +32,12 @@ object CSVColumnUtil {
    def getColumnData(colName: String)(implicit row: CSVRow): String = row.getColumnData(colName)
 
    def getColumnRange(headers: List[String])(implicit row: CSVRow): List[String] = {
-     val indicies = headers.map(h => row.headers.indexOf(h))
-     indicies.map(idx => if (idx < row.row.size) row.row(idx) else "")
+     val indices = headers.map(h => row.headers.indexOf(h))
+     indices.map(idx => if (idx < row.row.size) row.row(idx) else "")
    }
 
    def getColumnRange(startIdx: Int, endIdx: Int)(implicit row: CSVRow): List[String] = {
-     row.headers.slice(startIdx, endIdx).map(getColumnData(_))
+     row.headers.slice(startIdx, endIdx).map(getColumnData)
    }
 
 

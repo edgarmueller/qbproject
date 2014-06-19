@@ -7,10 +7,11 @@ import org.qbproject.schema._
 import org.qbproject.api.schema._
 import org.qbproject.api.csv.CSVColumnUtil
 import CSVColumnUtil._
+import play.api.data.validation.ValidationError
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 
-  override def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: CSVRow): JsResult[JsValue] = {
+  override def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
     fromTryCatch({
       schema match {
         case str: QBString =>
@@ -26,36 +27,43 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
         case num: QBNumber => JsNumber(asDouble(path))
       }
     }).fold(throwable => {
-      // check optionals and defaults
-      annotations.collectFirst { case optional: QBOptionalAnnotation =>
-        optional.fallBack
-      }.fold[JsResult[JsValue]] {
-        annotations.collectFirst {
-          case default: QBDefaultAnnotation => default
-        }.fold[JsResult[JsValue]] {
-          JsError(path, throwable.getMessage)
-        } {
-          default => JsSuccess(default.value)
-        }
-      } { possibleFallBack =>
-        JsSuccess(possibleFallBack.fold[JsValue] {
-          JsUndefined("")
-        } {
-          identity
-        })
-      }
+      handleAnnotations(schema, path, annotations)
     }, JsSuccess(_))
   }
 
-  override def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: CSVRow): JsResult[JsValue] = {
-    val csvHeader = path.toString.substring(1).replace("/", ".")
-    root.headers.find(_.contains(csvHeader))
-      .map(matchedHeader => root.headers.indexOf(matchedHeader))
+  def handleAnnotations[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
+    // check optionals and defaults
+    annotations.collectFirst { case optional: QBOptionalAnnotation =>
+      optional.fallBack
+    }.fold[JsResult[JsValue]] {
+      annotations.collectFirst {
+        case default: QBDefaultAnnotation => default
+      }.fold[JsResult[JsValue]] {
+        JsError(path -> ValidationError("Expected: " + schema + " (input: " + getColumnData(resolvePath(path)) + ")",
+          CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+      } {
+        default => JsSuccess(default.value)
+      }
+    } { possibleFallBack =>
+      JsSuccess(possibleFallBack.fold[JsValue] {
+        JsUndefined("")
+      } {
+        identity
+      })
+    }
+  }
+
+  override def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
+    val csvHeader = path.toString().substring(1).replace("/", ".")
+    row.headers.find(_.contains(csvHeader))
+      .map(matchedHeader => row.headers.indexOf(matchedHeader))
       .fold [JsResult[JsValue]] {
-      JsError("Could not find column " + csvHeader + ".")
+      JsError(path -> 
+        ValidationError("Could not find column " + csvHeader + ".",
+          CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
     } { startIndex =>
-      val matchingHeaders = root.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
-      val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(root)
+      val matchingHeaders = row.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
+      val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(row)
       val qbType = schema.items
 
       val childElements = (0 until strList.size).map {

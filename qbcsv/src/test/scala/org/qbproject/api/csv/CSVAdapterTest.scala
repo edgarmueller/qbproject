@@ -1,6 +1,6 @@
 package org.qbproject.api.csv
 
-import java.io.{ByteArrayInputStream}
+import java.io.ByteArrayInputStream
 import play.api.libs.json._
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
@@ -131,7 +131,7 @@ object CSVAdapterTest extends Specification {
       val adapter = CSVAdapter()
       val bis = new ByteArrayInputStream(Data.basic.companyData.getBytes("UTF-8"))
       val companies = adapter.parse(Schemas.basic.companySchema keep ("id", "company"), QBResource("companies.csv", bis))
-      bis.close
+      bis.close()
       val firstCompany = companies(0).get
       firstCompany must beEqualTo(Json.obj(
         "id" -> 1, "company" -> Json.obj(
@@ -343,37 +343,6 @@ object CSVAdapterTest extends Specification {
       result must beAnInstanceOf[JsError]
     }
 
-    "report errors if CSV does not conform to schema" in {
-
-      val companyData = """id;company.name;company.openHours
-            1;Dude GmbH;14-18
-            3;Dude GmbH;14-18
-            4x;Dude GmbH;14-18
-            5x;Dude GmbH;14-18
-            2xxx;Nerd Inc.;12-24""".stripMargin
-
-      val companyResource = QBResource("companies.csv", mkInputStream(companyData))
-      val featureResource = QBResource("features.csv", mkInputStream(Data.basic.featureData))
-      val resourceSet = QBResourceSet(companyResource, featureResource)
-
-      val result = CSVAdapter().parse("companies.csv", Schemas.basic.companySchema -- ("products"))(
-          "features" -> resource("features.csv", "id")
-      )(resourceSet)
-
-      println(result)
-
-      val bla = result.asInstanceOf[JsError].errors.map { pathWithError =>
-        val messages = pathWithError._2.map(_.message).mkString("\n")
-        messages
-      }
-//      println(bla)
-
-      println(Json.prettyPrint(JsError.toFlatJson(result.asInstanceOf[JsError])))
-      println(JsError.toFlatForm(result.asInstanceOf[JsError]))
-
-      result must beAnInstanceOf[JsError]
-    }
-
     "TODO: inner join(?)" in {
 
       val companyResource = QBResource("companies.csv", mkInputStream(Data.basic.companyData))
@@ -479,10 +448,11 @@ object CSVAdapterTest extends Specification {
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
+      // TODO: check error message
       result must beAnInstanceOf[JsError]
     }
 
-    "TODO: split arrays" in {
+    "be able to split arrays when joining" in {
 
       val companyData = """id;company.name;company.openHours;products.colors
             1;Dude GmbH;14-18;brown,red
@@ -502,7 +472,7 @@ object CSVAdapterTest extends Specification {
       )
 
       val result = CSVAdapter(
-        "products.colors" --> { case cell: String => JsArray(cell.split(',').toList.map(JsString)) }
+        "products.colors" --> { case cell: String => JsArray(cell.split(',').map(JsString).toList) }
       ).parse("companies.csv", companySchema)(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
@@ -514,8 +484,8 @@ object CSVAdapterTest extends Specification {
           "openHours" -> "14-18"
         ),
         "products" -> Json.obj(
-          "colors" -> Json.arr("brown", "red"),
-          "options" -> Json.arr(
+          "colors" -> JsArray(Seq(JsString("brown"), JsString("red"))),
+          "options" -> JsArray(Seq(
             Json.obj(
               "name" -> "Beer",
               "price" -> 5.0
@@ -524,7 +494,7 @@ object CSVAdapterTest extends Specification {
               "name" -> "Pizza",
               "price" -> 8.0
             )
-          )
+          ))
         )
       )
       )
