@@ -22,9 +22,9 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
           } else {
             JsString(str)
           }
-        case bool: QBBoolean => JsBoolean(asBoolean(path))
-        case int: QBInteger => JsNumber(asDouble(path))
-        case num: QBNumber => JsNumber(asDouble(path))
+        case bool: QBBoolean => JsString(asString(path))
+        case int: QBInteger => JsString(asString(path))
+        case num: QBNumber => JsString(asString(path))
       }
     }).fold(throwable => {
       handleAnnotations(schema, path, annotations)
