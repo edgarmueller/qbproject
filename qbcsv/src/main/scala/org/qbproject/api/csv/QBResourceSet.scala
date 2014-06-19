@@ -5,7 +5,7 @@ import play.api.libs.json.{JsSuccess, JsError, JsResult}
 
 case class QBResource(identifier: String, inputStream: InputStream) {
 
-  def close = inputStream.close()
+  def close() = inputStream.close()
 
   override def toString = identifier
 }
@@ -22,7 +22,7 @@ case class QBResourceSet(resources: QBResource*) {
     resource => resource.identifier -> resource
   ).toMap
 
-  def close = resources foreach { _.close }
+  def close() = resources foreach { _.close() }
 
   def get(identifier: String): JsResult[QBResource] = {
     resourceMap.get(identifier).fold[JsResult[QBResource]] {

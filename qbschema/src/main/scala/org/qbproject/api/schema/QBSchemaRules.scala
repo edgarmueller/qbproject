@@ -80,7 +80,7 @@ trait CompositeRule[A <: JsValue] extends ValidationRule[A] {
    * @return the error message
    */
   override def errorMessage =
-    rules.foldLeft("")((msg,rule) => { /*println(msg + "/" + rule.errorMessage);*/ msg + rule.errorMessage })
+    rules.map(_.errorMessage).mkString(",")
 }
 
 //----------------------------------------------------------

@@ -24,11 +24,11 @@ class CSVParserTest extends Specification {
     2;Otto;otto@qb.org;26;ginger;"""
 
   def jsonObj(schema: QBClass, fields: List[String]): JsObject = {
-    JsObject(schema.attributes.map(_.name).zip(fields.map(JsString(_))))
+    JsObject(schema.attributes.map(_.name).zip(fields.map(JsString)))
   }
 
   def jsonObj(schema: QBClass, fields: List[String], fieldModifier: String => JsValue): JsObject = {
-    JsObject(schema.attributes.map(_.name).zip(fields.map(fieldModifier(_))))
+    JsObject(schema.attributes.map(_.name).zip(fields.map(fieldModifier)))
   }
 
   "CSV Adapter" should {
@@ -235,7 +235,7 @@ class CSVParserTest extends Specification {
         "array" -> qbList(qbString))
 
       val adapter = CSVAdapter(Path("array") -> {
-        case x: String => JsArray(x.split("\n").map(JsString(_)))
+        case x: String => JsArray(x.split("\n").map(JsString))
       })
 
       val result = parse(schema, csv, adapter)
