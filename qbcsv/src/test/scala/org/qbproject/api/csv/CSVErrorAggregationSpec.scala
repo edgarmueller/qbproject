@@ -6,7 +6,7 @@ import java.io.ByteArrayInputStream
 import play.api.libs.json.{ Json, JsError }
 import play.api.data.validation.ValidationError
 import org.qbproject.csv.CSVErrorInfo
-import org.qbproject.csv.CSVAdapter
+import org.qbproject.csv.CSVImporter
 
 class CSVErrorAggregationSpec extends Specification {
 

@@ -12,7 +12,7 @@ import org.qbproject.api.csv.QBResourceSet
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import org.qbproject.csv.CSVColumnUtil.CSVRow
 
-trait CSVAdapter extends CSVSchemaAdapter {
+trait CSVImporter extends CSVSchemaAdapter {
 
   type AttributeName = String
 
@@ -167,10 +167,10 @@ trait CSVAdapter extends CSVSchemaAdapter {
   }
 }
 
-object CSVAdapter {
+object CSVImporter {
 
   def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
-    new CSVAdapter{
+    new CSVImporter {
 	  override val pathBuilders = toPathBuilders(pathConstructors)
     }
 

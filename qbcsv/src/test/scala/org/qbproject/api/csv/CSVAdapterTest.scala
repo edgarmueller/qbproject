@@ -7,7 +7,7 @@ import play.api.libs.json.JsString
 import org.specs2.mutable.Specification
 import org.qbproject.csv.Path
 import org.qbproject.api.schema.QBSchema._
-import org.qbproject.csv.CSVAdapter
+import org.qbproject.csv.CSVImporter
 
 object CSVAdapterTest extends Specification {
 
