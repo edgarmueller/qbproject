@@ -8,6 +8,8 @@ import org.qbproject.api.schema.{QBClass, QBType, QBValidator, QBSchema}
 import QBSchema._
 import org.junit.runner.RunWith
 import org.qbproject.csv.{Path, CSVSchemaAdapter}
+import org.qbproject.csv.CSVColumnUtil
+import org.qbproject.csv.CSVAdapter
 
 @RunWith(classOf[JUnitRunner])
 class CSVParserTest extends Specification {

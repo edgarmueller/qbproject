@@ -7,6 +7,7 @@ import play.api.libs.json.JsString
 import org.specs2.mutable.Specification
 import org.qbproject.csv.Path
 import org.qbproject.api.schema.QBSchema._
+import org.qbproject.csv.CSVAdapter
 
 object CSVAdapterTest extends Specification {
 
@@ -399,7 +400,7 @@ object CSVAdapterTest extends Specification {
         )
       )
 
-      val result = CSVValidator().parse("companies.csv", companySchema)(
+      val result = QBCSVValidator().parse("companies.csv", companySchema)(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
@@ -444,7 +445,7 @@ object CSVAdapterTest extends Specification {
         )
       )
 
-      val result = CSVValidator().parse("companies.csv", companySchema)(
+      val result = QBCSVValidator().parse("companies.csv", companySchema)(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 

@@ -29,7 +29,6 @@ package object csv {
     def splitKey = SplitJoinKeyHelper(joinKey)
     def <->(s2: String) = JoinKey(joinKey, s2)
     def <->(s2: SplitJoinKeyHelper) = ForeignSplitKey(joinKey, s2.key)
-
   }
 
   implicit class MappedPathStringExtensions(str: String) {
@@ -52,6 +51,7 @@ package object csv {
   case class SplitJoinKeyHelper(key: String)
 
   case class QBCSVError(msg: String, resourceIdentifier: String, row: Int, header: String)
+  
   case class QBCSVErrorMap(errorMap: Map[String, Seq[QBCSVError]]) {
     def prettyPrint = errorMap.foldLeft(new StringBuilder)((builder, entry) =>
       builder.append("CSV file " + entry._1 + "\n" +

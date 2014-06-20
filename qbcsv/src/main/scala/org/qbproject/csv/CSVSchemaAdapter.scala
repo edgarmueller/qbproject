@@ -5,7 +5,6 @@ import scalaz.Validation.fromTryCatch
 import scala.util.Try
 import org.qbproject.schema._
 import org.qbproject.api.schema._
-import org.qbproject.api.csv.CSVColumnUtil
 import CSVColumnUtil._
 import play.api.data.validation.ValidationError
 
@@ -22,9 +21,9 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
           } else {
             JsString(str)
           }
-        case bool: QBBoolean => JsString(asString(path))
-        case int: QBInteger => JsString(asString(path))
-        case num: QBNumber => JsString(asString(path))
+        case bool: QBBoolean => JsBoolean(asBoolean(path))
+        case int: QBInteger => JsNumber(asDouble(path))
+        case num: QBNumber => JsNumber(asDouble(path))
       }
     }).fold(throwable => {
       handleAnnotations(schema, path, annotations)
@@ -42,8 +41,9 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
         default => JsSuccess(default.value)
       }
     }
-    annotations.collectFirst { case optional: QBOptionalAnnotation =>
-      optional.fallBack
+    annotations.collectFirst {
+      case optional: QBOptionalAnnotation =>
+        optional.fallBack
     }.fold[JsResult[JsValue]] {
       handleDefault
     } { possibleFallBack =>
@@ -59,37 +59,35 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
     val csvHeader = path.toString().substring(1).replace("/", ".")
     row.headers.find(_.contains(csvHeader))
       .map(matchedHeader => row.headers.indexOf(matchedHeader))
-      .fold [JsResult[JsValue]] {
-      JsError(path -> 
-        ValidationError("Could not find column " + csvHeader + ".",
-          CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
-    } { startIndex =>
-      val matchingHeaders = row.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
-      val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(row)
-      val qbType = schema.items
+      .fold[JsResult[JsValue]] {
+        JsError(path ->
+          ValidationError("Could not find column " + csvHeader + ".",
+            CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+      } { startIndex =>
+        val matchingHeaders = row.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
+        val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(row)
+        val qbType = schema.items
 
-      val childElements = (0 until strList.size).map {
-        idx => convert (qbType, path(idx), Seq.empty)
-      }
+        val childElements = (0 until strList.size).map {
+          idx => convert(qbType, path(idx), Seq.empty)
+        }
 
-      if (! childElements.exists (_.asOpt.isEmpty) ) {
-        JsSuccess(JsArray (childElements.collect {
-          case (JsSuccess (s, p) ) => s
-        }))
-      } else {
-        JsError(childElements.collect{
-          case JsError(err) => err }.reduceLeft(_ ++ _))
+        if (!childElements.exists(_.asOpt.isEmpty)) {
+          JsSuccess(JsArray(childElements.collect {
+            case (JsSuccess(s, p)) => s
+          }))
+        } else {
+          JsError(childElements.collect {
+            case JsError(err) => err
+          }.reduceLeft(_ ++ _))
+        }
       }
-    }
 
   }
 
-
   def pathExists(path: JsPath)(implicit root: CSVRow): Boolean = Try {
-    getColumnData(path)(filter(path))
+    getColumnData(path)
   }.map(_ != "").getOrElse(false)
-
-  def filter[A](path: String)(implicit row: CSVRow): CSVRow = row
 
   implicit def toCSVPath(path: JsPath): String = resolvePath(path)
 

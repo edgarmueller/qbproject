@@ -32,7 +32,7 @@ package object csv {
     def csvPath: String
   }
 
-  case class Path(path: String) extends PathSpec{
+  case class Path(path: String) extends PathSpec {
     def schemaPath = path
     def csvPath = path
   }

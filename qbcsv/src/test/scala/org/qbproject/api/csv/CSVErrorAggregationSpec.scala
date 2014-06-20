@@ -3,9 +3,10 @@ package org.qbproject.api.csv
 import org.specs2.mutable.Specification
 import org.qbproject.api.schema.QBSchema._
 import java.io.ByteArrayInputStream
-import play.api.libs.json.{Json, JsError}
+import play.api.libs.json.{ Json, JsError }
 import play.api.data.validation.ValidationError
 import org.qbproject.csv.CSVErrorInfo
+import org.qbproject.csv.CSVAdapter
 
 class CSVErrorAggregationSpec extends Specification {
 
@@ -29,7 +30,6 @@ class CSVErrorAggregationSpec extends Specification {
     val featureData = """id;strength;speed
             1;3;2
             2;2;4""".stripMargin
-
 
     "report errors if CSV does not conform to schema" in {
 
@@ -62,7 +62,6 @@ class CSVErrorAggregationSpec extends Specification {
       result must beAnInstanceOf[JsError]
     }
 
-
     "report all CSV errors in case both CSV files contain errors" in {
 
       val productSchema = qbClass(
@@ -93,8 +92,8 @@ class CSVErrorAggregationSpec extends Specification {
       val productResource = QBResource("products.csv", new ByteArrayInputStream(productData.getBytes("UTF-8")))
       val resourceSet = QBResourceSet(companyResource, productResource)
 
-      val result = CSVValidator(
-        "products.colors" --> { case cell: String => Json.arr(cell.split(',').toList)}
+      val result = QBCSVValidator(
+        "products.colors" --> { case cell: String => Json.arr(cell.split(',').toList) }
       ).parse("companies.csv", companySchema)(
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)

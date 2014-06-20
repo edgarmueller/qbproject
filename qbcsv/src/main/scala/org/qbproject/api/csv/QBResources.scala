@@ -3,6 +3,12 @@ package org.qbproject.api.csv
 import java.io.InputStream
 import play.api.libs.json.{JsSuccess, JsError, JsResult}
 
+/**
+ * A resource represents one CSV file.
+ * 
+ * @param identifier name of resource
+ * @param inputStream inputstream of the resource
+ */
 case class QBResource(identifier: String, inputStream: InputStream) {
 
   def close() = inputStream.close()

@@ -1,17 +1,12 @@
 package org.qbproject.api.csv
 
-import org.qbproject.api.schema.{QBValidator, QBClass, QBType}
-import org.qbproject.api.csv.CSVColumnUtil.CSVRow
+import org.qbproject.api.schema.{ QBValidator, QBClass, QBType }
+import org.qbproject.csv.CSVColumnUtil.CSVRow
 import org.qbproject.csv._
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
 
-object CSVValidator {
-  def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
-    new CSVValidator(CSVAdapter.toPathBuilders(pathConstructors))
-}
-
-class CSVValidator(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVAdapter(_pathBuilders) {
+class QBCSVValidator(override val pathBuilders: Map[String, CSVRow => JsValue]) extends CSVAdapter {
 
   override def parse(schema: QBType, resource: QBResource, joinKeys: Set[ForeignSplitKey] = Set.empty): List[JsResult[JsValue]] = {
     val parser = new CSVValidateRowUtil(schema.asInstanceOf[QBClass])(row => adapt(schema.asInstanceOf[QBClass])(row), joinKeys)
@@ -23,8 +18,8 @@ class CSVValidator(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVAda
 
     override def useParsedResult(jsResult: JsResult[JsValue], csvDiagnosis: CSVDiagnosis) = jsResult.flatMap[JsValue] {
       QBValidator.validateJsValue(schema)(_) match {
-        case success@JsSuccess(_, _) => success
-        case _@JsError(errors) =>
+        case success @ JsSuccess(_, _) => success
+        case _@ JsError(errors) =>
           JsError(errors.map(pathWithErrors => pathWithErrors._1 ->
             pathWithErrors._2.map(error =>
               ValidationError(
@@ -34,4 +29,10 @@ class CSVValidator(_pathBuilders: Map[String, CSVRow => JsValue]) extends CSVAda
       }
     }
   }
+
+}
+
+object QBCSVValidator {
+  def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
+    new QBCSVValidator(CSVAdapter.toPathBuilders(pathConstructors))
 }
