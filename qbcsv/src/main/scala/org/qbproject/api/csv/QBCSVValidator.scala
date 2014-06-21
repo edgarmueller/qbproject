@@ -13,7 +13,7 @@ class QBCSVValidator(override val pathBuilders: Map[String, CSVRow => JsValue]) 
     parser.parse(resource, ';', '"')
   }
 
-  class CSVValidateRowUtil(schema: QBClass)(
+  private class CSVValidateRowUtil(schema: QBClass)(
     factory: CSVRow => JsResult[JsValue], joinKeys: Set[ForeignSplitKey] = Set.empty) extends CSVAdaptRowUtil(factory) {
 
     override def useParsedResult(jsResult: JsResult[JsValue], csvDiagnosis: CSVDiagnosis) = jsResult.flatMap[JsValue] {
@@ -36,3 +36,4 @@ object QBCSVValidator {
   def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
     new QBCSVValidator(CSVImporter.toPathBuilders(pathConstructors))
 }
+

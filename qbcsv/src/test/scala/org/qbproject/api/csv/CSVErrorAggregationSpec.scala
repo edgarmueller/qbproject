@@ -44,7 +44,7 @@ class CSVErrorAggregationSpec extends Specification {
       val featureResource = QBResource("features.csv", new ByteArrayInputStream(featureData.getBytes("UTF-8")))
       val resourceSet = QBResourceSet(companyResource, featureResource)
 
-      val result = CSVAdapter().parse("companies.csv", companySchema -- "products")(
+      val result = CSVImporter().parse("companies.csv", companySchema -- "products")(
         "features" -> resource("features.csv", "id")
       )(resourceSet)
 

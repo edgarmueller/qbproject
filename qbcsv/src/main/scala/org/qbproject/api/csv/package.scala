@@ -4,7 +4,7 @@ import org.qbproject.csv._
 import org.qbproject.csv.SplitKey
 import org.qbproject.csv.ResourceReference
 import org.qbproject.csv.JoinKey
-import play.api.libs.json.{JsError, JsValue}
+import play.api.libs.json.{ JsError, JsValue }
 
 package object csv {
 
@@ -32,14 +32,14 @@ package object csv {
   }
 
   implicit class MappedPathStringExtensions(str: String) {
-  // TODO: extract constant
+    // TODO: extract constant
     def maps(otherString: String): String = str + "$" + otherString
-    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) =  if (str.contains("$")) {
-        val splitted = str.split('$').toList
-        MappedPath(splitted.head, splitted.last) -> pf
-      } else {
-        Path(str) -> pf
-      }
+    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) = if (str.contains("$")) {
+      val splitted = str.split('$').toList
+      MappedPath(splitted.head, splitted.last) -> pf
+    } else {
+      Path(str) -> pf
+    }
   }
 
   case class MappedPathString(str: String, otherString: String)
@@ -51,8 +51,9 @@ package object csv {
   case class SplitJoinKeyHelper(key: String)
 
   case class QBCSVError(msg: String, resourceIdentifier: String, row: Int, header: String)
-  
+
   case class QBCSVErrorMap(errorMap: Map[String, Seq[QBCSVError]]) {
+
     def prettyPrint = errorMap.foldLeft(new StringBuilder)((builder, entry) =>
       builder.append("CSV file " + entry._1 + "\n" +
         entry._2.map(error => "\t at row " + error.row + ": " + error.msg).mkString("\n") + "\n"
@@ -61,6 +62,7 @@ package object csv {
   }
 
   object QBCSVErrorMap {
+
     def apply(error: JsError): QBCSVErrorMap = {
       val errorMap = error.errors.foldLeft(Map[String, List[QBCSVError]]())((errorMap, pathWithErrors) =>
         pathWithErrors._2.foldLeft(errorMap)((map, error) =>

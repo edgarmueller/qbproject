@@ -34,6 +34,30 @@ trait CSVImporter extends CSVSchemaAdapter {
     result
   }
 
+  def parseResources(mainResourceIdentifier: String, schema: QBClass)(resourceMapping: ResourceMapping)(resourceSet: QBResourceSet): JsResult[List[JsValue]] = {
+
+    val updatedSchema = keepSplitKeys(schema, resourceMapping)
+
+    for {
+      resolvedResource <- resourceSet.get(mainResourceIdentifier)
+      resolvedForeignResources <- sequenceJsResults[QBResource](resourceMapping.resourceIdentifiers.map(resourceSet.get))
+      foreignSchemas = buildForeignSchemaMappings(schema, resourceMapping, resolvedForeignResources)
+      results <- parseAll(
+        (updatedSchema, resolvedResource) :: foreignSchemas,
+        resourceMapping.foreignSplitKeys.map(_._2)
+      )
+    } yield {
+      val joinData = resourceMapping.map(mappedResource =>
+        mappedResource.attributeName -> mappedResource.resourceRef.joinKeys
+      ).zip(results.tail)
+        .map {
+          case ((attributeName, joinKeys), rowData) => JoinData(attributeName, joinKeys, rowData)
+        }
+
+      fold(results.head.asInstanceOf[List[JsObject]], joinData)
+    }
+  }
+
   /**
    * Mix in join keys into sub schemas.
    */
@@ -69,32 +93,6 @@ trait CSVImporter extends CSVSchemaAdapter {
 
   def keepSplitKeys(schema: QBClass, resourceMapping: ResourceMapping) = {
     schema -- resourceMapping.allExceptSplitKeys.map(_._1)
-  }
-
-  def parseResources(mainResourceIdentifier: String, schema: QBClass)(resourceMapping: ResourceMapping)(provider: QBResourceSet): JsResult[List[JsValue]] = {
-
-    val updatedSchema = keepSplitKeys(schema, resourceMapping)
-
-    for {
-      resolvedResource <- provider.get(mainResourceIdentifier)
-      resolvedForeignResources <- sequenceJsResults[QBResource](resourceMapping.resourceIdentifiers.map(provider.get))
-      foreignSchemas = buildForeignSchemaMappings(schema, resourceMapping, resolvedForeignResources)
-      results <- parseAll(
-        (updatedSchema, resolvedResource) :: foreignSchemas,
-        resourceMapping.foreignSplitKeys.map(_._2)
-      )
-    } yield {
-      val joinData = resourceMapping.map(mappedResource =>
-        mappedResource.attributeName -> mappedResource.resourceRef.joinKeys
-      ).zip(results.tail)
-        .map(x =>
-          JoinData(attributeName = x._1._1,
-            keys = x._1._2,
-            data = x._2)
-        )
-
-      fold(results.head.asInstanceOf[List[JsObject]], joinData)
-    }
   }
 
   private def findMatchingData(targetId: JsValue, foreignData: JoinData): List[JsObject] = {
@@ -171,7 +169,7 @@ object CSVImporter {
 
   def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
     new CSVImporter {
-	  override val pathBuilders = toPathBuilders(pathConstructors)
+      override val pathBuilders = toPathBuilders(pathConstructors)
     }
 
   def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, CSVRow => JsValue] = {

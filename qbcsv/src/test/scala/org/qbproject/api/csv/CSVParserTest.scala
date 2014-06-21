@@ -220,7 +220,7 @@ class CSVParserTest extends Specification {
         "range" -> rangeClass)
 
       val rangeRegex = "([0-9]+)\\s*-\\s*([0-9]+)".r
-      val adapter = CSVAdapter(Path("range") -> { case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt) })
+      val adapter = CSVImporter(Path("range") -> { case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt) })
       val result = parse(rangeSchema, rangeData, adapter)
 
       result.size must beEqualTo(1)
@@ -236,7 +236,7 @@ class CSVParserTest extends Specification {
       val schema = qbClass(
         "array" -> qbList(qbString))
 
-      val adapter = CSVAdapter(Path("array") -> {
+      val adapter = CSVImporter(Path("array") -> {
         case x: String => JsArray(x.split("\n").map(JsString))
       })
 
@@ -259,7 +259,7 @@ class CSVParserTest extends Specification {
         "array" -> qbList(arrayItem)
       )
 
-      val transformer = CSVAdapter(
+      val transformer = CSVImporter(
         "array" --> {
           case x: String =>
             val fieldsList = x.split("\n").toList.map(_.split("//").toList)

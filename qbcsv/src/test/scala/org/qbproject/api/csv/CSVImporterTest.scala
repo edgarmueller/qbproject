@@ -9,9 +9,9 @@ import org.qbproject.csv.Path
 import org.qbproject.api.schema.QBSchema._
 import org.qbproject.csv.CSVImporter
 
-object CSVAdapterTest extends Specification {
+object CSVImpoterTest extends Specification {
 
-  "CSV Adapter" should {
+  "CSV Importer" should {
 
     def mkInputStream(data: String) = new ByteArrayInputStream(data.getBytes("UTF-8"))
 
@@ -129,7 +129,7 @@ object CSVAdapterTest extends Specification {
      */
 
     "read a basic CSV file" in {
-      val adapter = CSVAdapter()
+      val adapter = CSVImporter()
       val bis = new ByteArrayInputStream(Data.basic.companyData.getBytes("UTF-8"))
       val companies = adapter.parse(Schemas.basic.companySchema keep ("id", "company"), QBResource("companies.csv", bis))
       bis.close()
@@ -151,7 +151,7 @@ object CSVAdapterTest extends Specification {
       val employeeResource  = QBResource("employees.csv", mkInputStream(Data.extended.employeeData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource, employeeResource)
 
-      val jsResults = CSVAdapter(
+      val jsResults = CSVImporter(
         "range"--> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         },
@@ -254,7 +254,7 @@ object CSVAdapterTest extends Specification {
       val productsResource = QBResource("products.csv", mkInputStream(Data.extended.multiProductData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource)
 
-      val result = CSVAdapter(
+      val result = CSVImporter(
         Path("range") -> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         }
@@ -328,7 +328,7 @@ object CSVAdapterTest extends Specification {
       val productsResource = QBResource("products.csv", mkInputStream(Data.extended.multiProductData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource)
 
-      val result = CSVAdapter(
+      val result = CSVImporter(
         Path("range") -> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         }
@@ -359,7 +359,7 @@ object CSVAdapterTest extends Specification {
         )
       )
 
-      val result = CSVAdapter().parse("companies.csv", companySchema)(
+      val result = CSVImporter().parse("companies.csv", companySchema)(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
@@ -472,7 +472,7 @@ object CSVAdapterTest extends Specification {
         )
       )
 
-      val result = CSVAdapter(
+      val result = CSVImporter(
         "products.colors" --> { case cell: String => JsArray(cell.split(',').map(JsString).toList) }
       ).parse("companies.csv", companySchema)(
         "products.options" -> resource("products.csv", "id")

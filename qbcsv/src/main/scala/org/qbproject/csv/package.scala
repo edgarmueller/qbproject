@@ -4,8 +4,8 @@ import play.api.libs.json.JsValue
 
 package object csv {
 
-  case class JoinData(attributeName: String, keys: JoinKeySpec, data: List[JsValue])
   case class CSVErrorInfo(resource: String, csvRow: Int, header: String = "")
+  case class JoinData(attributeName: String, keys: JoinKeySpec, data: List[JsValue])
   case class ResourceReference(resourceIdentifier: String, joinKeys: JoinKeySpec)
 
   /**
