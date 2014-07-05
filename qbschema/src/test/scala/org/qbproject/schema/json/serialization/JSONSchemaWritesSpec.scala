@@ -1,9 +1,9 @@
-package org.qbproject.schema.json.serialization
+package org.qbproject.schema.internal.json.serialization
 
 import play.api.libs.json.Json
-import org.qbproject.api.schema.{QBType, QBSchema}
+import org.qbproject.schema.{QBType, QBSchema}
 import QBSchema._
-import org.qbproject.schema._
+import org.qbproject.schema.internal._
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

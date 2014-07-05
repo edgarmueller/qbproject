@@ -1,16 +1,16 @@
-package org.qbproject.schema.json
+package org.qbproject.schema.internal.json
 
 import org.specs2.mutable.Specification
+import org.qbproject.schema.internal._
 import org.qbproject.schema._
-import org.qbproject.api.schema._
 import QBSchema._
 import play.api.libs.json._
 import play.api.libs.json.extensions.JsExtensions
 import java.util.Date
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import org.qbproject.schema.json.mapper.JsTypeMapperBuilder
-import org.qbproject.api.schema.QBTypeMapper
+import org.qbproject.schema.internal.json.mapper.JsTypeMapperBuilder
+import org.qbproject.schema.QBTypeMapper
 import play.api.libs.json.JsString
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject

@@ -3,12 +3,11 @@ package org.qbproject.api.csv
 import play.api.libs.json._
 import org.qbproject.schema._
 import scala.collection.immutable.Stream
-
 import scalaz.Validation
 import scalaz.Validation.fromTryCatch
 import scala.util.Try
-import org.qbproject.api.schema._
 import org.qbproject.api.csv.CSVColumnUtil._
+import org.qbproject.schema.internal.QBAdapter
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 

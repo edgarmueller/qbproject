@@ -1,9 +1,9 @@
-package org.qbproject.schema
+package org.qbproject.schema.internal
 
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
 import org.junit.runner.RunWith
-import org.qbproject.api.schema._
+import org.qbproject.schema._
 
 @RunWith(classOf[JUnitRunner])
 object SchemaCombinatorsSpec extends Specification {

@@ -9,7 +9,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
-import org.qbproject.api.schema.QBSchema
+import org.qbproject.schema.QBSchema
 import QBSchema._
 import org.qbproject.api.mongo.{MongoSchemaExtensions, QBMongoCollection}
 import MongoSchemaExtensions._

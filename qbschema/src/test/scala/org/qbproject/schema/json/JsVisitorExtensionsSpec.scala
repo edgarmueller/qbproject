@@ -1,14 +1,14 @@
-package org.qbproject.schema.json
+package org.qbproject.schema.internal.json
 
-import org.qbproject.schema.json.processors.JsDefaultValueProcessor
+import org.qbproject.schema.internal.json.processors.JsDefaultValueProcessor
+import org.qbproject.schema.internal._
 import org.qbproject.schema._
-import org.qbproject.api.schema._
 import QBSchema._
-import org.qbproject.schema.visitor.{Visitor, QBPath, JsValueProcessor, AnnotationProcessor}
+import org.qbproject.schema.internal.visitor.{Visitor, QBPath, JsValueProcessor, AnnotationProcessor}
 import play.api.libs.json.{Json, JsString, JsObject, JsValue}
 import org.specs2.mutable.Specification
-import org.qbproject.schema.visitor.QBPath
-import org.qbproject.api.schema.QBStringImpl
+import org.qbproject.schema.internal.visitor.QBPath
+import org.qbproject.schema.QBStringImpl
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import scala.Some

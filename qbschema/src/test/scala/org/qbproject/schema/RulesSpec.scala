@@ -1,8 +1,8 @@
-package org.qbproject.schema
+package org.qbproject.schema.internal
 
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
-import org.qbproject.api.schema.QBSchema
+import org.qbproject.schema.QBSchema
 import QBSchema._
 import org.junit.runner.RunWith
 import play.api.libs.json._

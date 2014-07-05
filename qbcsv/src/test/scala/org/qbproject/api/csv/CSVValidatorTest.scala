@@ -4,7 +4,7 @@ import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 import java.io.ByteArrayInputStream
 import play.api.libs.json._
-import org.qbproject.api.schema.{QBClass, QBType, QBValidator, QBSchema}
+import org.qbproject.schema.{QBClass, QBType, QBValidator, QBSchema}
 import QBSchema._
 import org.junit.runner.RunWith
 

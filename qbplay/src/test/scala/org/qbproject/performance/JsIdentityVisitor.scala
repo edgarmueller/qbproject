@@ -1,9 +1,9 @@
 package org.qbproject.performance
 
 import play.api.libs.json._
-import org.qbproject.schema.json.JsVisitor
-import org.qbproject.schema.visitor.QBPath
-import org.qbproject.api.schema.{QBArray, QBClass, QBPrimitiveType}
+import org.qbproject.schema.internal.json.JsVisitor
+import org.qbproject.schema.internal.visitor.QBPath
+import org.qbproject.schema.{QBArray, QBClass, QBPrimitiveType}
 
 trait JsIdentityVisitor extends JsVisitor {
 

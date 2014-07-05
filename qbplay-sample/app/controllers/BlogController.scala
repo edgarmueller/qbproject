@@ -7,7 +7,7 @@ import play.api.libs.json._
 import play.modules.reactivemongo.MongoController
 import org.qbproject.api.controllers.{QBCrudController, QBAPIController}
 import org.qbproject.api.mongo.{QBCollectionValidation, QBMongoCollection}
-import org.qbproject.api.schema.QBSchema
+import org.qbproject.schema.QBSchema
 import QBSchema._
 import org.qbproject.api.routing.QBRouterUtil.namespace
 import org.qbproject.api.routing.{QBRouter, QBRoute}

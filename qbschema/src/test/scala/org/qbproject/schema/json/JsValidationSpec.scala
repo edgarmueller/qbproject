@@ -1,11 +1,11 @@
-package org.qbproject.schema.json
+package org.qbproject.schema.internal.json
 
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json._
-import org.qbproject.schema._
-import org.qbproject.api.schema.{QBClass, QBPartialValidator, QBValidator, QBSchema}
+import org.qbproject.schema.internal._
+import org.qbproject.schema.{QBClass, QBPartialValidator, QBValidator, QBSchema}
 import QBSchema._
 import scala.math.BigDecimal.int2bigDecimal
 import org.junit.runner.RunWith

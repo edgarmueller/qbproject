@@ -1,7 +1,7 @@
 package org.qbproject.routing
 
 import org.specs2.mutable._
-import org.qbproject.api.routing.{ GET => qbGET, POST => qbPOST, _ }
+import org.qbproject.routing.{ GET => qbGET, POST => qbPOST, _ }
 import play.core.Router
 import play.api.mvc._
 import play.api.test.WithApplication

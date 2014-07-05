@@ -1,7 +1,7 @@
 package org.qbproject.routing
 
 import org.specs2.mutable._
-import org.qbproject.api.routing.{ GET => qbGET, POST => qbPOST, _ }
+import org.qbproject.routing.{ GET => qbGET, POST => qbPOST, _ }
 import play.core.Router
 import play.api.mvc._
 import play.api.test.WithApplication
@@ -10,7 +10,7 @@ import play.api.test.PlaySpecification
 import play.api.test.FakeApplication
 import scala.concurrent._
 import ExecutionContext.Implicits.global
-import org.qbproject.api.routing.internal.QBRouterUtil.QBRouteCollector
+import org.qbproject.routing.internal.QBRouterUtil.QBRouteCollector
 
 class QBBaseRouterExtensionsSpec extends PlaySpecification {
 

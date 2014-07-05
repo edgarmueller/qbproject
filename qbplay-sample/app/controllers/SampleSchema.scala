@@ -2,7 +2,7 @@ package controllers
 
 import scala.collection.mutable.Map
 import play.api.libs.json._
-import org.qbproject.api.schema.QBSchema
+import org.qbproject.schema.QBSchema
 
 object SampleSchema {
 

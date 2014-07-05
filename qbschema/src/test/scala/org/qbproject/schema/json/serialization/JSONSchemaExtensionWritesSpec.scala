@@ -1,11 +1,11 @@
-package org.qbproject.schema.json.serialization
+package org.qbproject.schema.internal.json.serialization
 
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 import org.junit.runner.RunWith
 import scala.math.BigDecimal.int2bigDecimal
-import org.qbproject.schema._
-import org.qbproject.api.schema.{QBType, QBSchema}
+import org.qbproject.schema.internal._
+import org.qbproject.schema.{QBType, QBSchema}
 import QBSchema._
 import play.api.libs.json.Json
 import play.api.libs.json.JsNumber

@@ -1,10 +1,10 @@
-package org.qbproject.schema
+package org.qbproject.schema.internal
 
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
-import org.qbproject.schema._
-import org.qbproject.api.schema.{QBValidator, QBSchema}
+import org.qbproject.schema.internal._
+import org.qbproject.schema.{QBValidator, QBSchema}
 import QBSchema.{ length => strLength, _ }
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
