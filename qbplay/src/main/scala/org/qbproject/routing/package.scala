@@ -36,7 +36,7 @@ package object routing extends QBRouteWrapping {
     }
     def apply(prefix: String, route: => QBRoute): QBRoute = copyRoute(prefix, route)
     private def copyRoute(prefix: String, route: QBRoute): QBRoute = {
-      route.copy(path = QBRouterUtil.joinPaths("/", prefix, route.path))
+      route.copy(path = QBRouterUtil.joinPaths(true)(prefix, route.path))
     }
   }
 

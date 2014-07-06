@@ -28,6 +28,14 @@ class QBRouterUtilSpec extends Specification {
     "join paths with root slash" in {
     	QBRouterUtil.joinPaths("/", "") must equalTo("/")
     }
+    
+    "join paths with no starting slash" in {
+    	QBRouterUtil.joinPaths(false)("http://", "dude.com") must equalTo("http://dude.com")
+    }
+    
+    "join paths with adding starting slash slash" in {
+    	QBRouterUtil.joinPaths(true)("blub", "foo") must equalTo("/blub/foo")
+    }
   }
   
 }

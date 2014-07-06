@@ -85,7 +85,7 @@ class QBBaseRouterSpec extends PlaySpecification {
     val twoStringRoute = GET / "one" / string / "two" / string to twoString
 
     val allRoutes = List(numberRoute, sayHello, bothRoute, twoStringRoute)
-
+    
     val FakeAppWithRouter = new FakeApplication {
       override lazy val routes: Option[Router.Routes] =
         Some(QBRouter(allRoutes))

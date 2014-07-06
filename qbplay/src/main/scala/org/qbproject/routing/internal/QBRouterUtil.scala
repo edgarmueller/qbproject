@@ -28,11 +28,19 @@ object QBRouterUtil {
    *
    * @param pathParts
    */
-  def joinPaths(pathParts: String*): String = {
+  def joinPaths(pathParts: String*): String = joinPaths(false)(pathParts: _*)
+
+  /**
+   * Joins parts of a URL path to one path.
+   *
+   * @param ensureStartingSlash ensures starting /
+   * @param pathParts
+   */
+  def joinPaths(ensureStartingSlash: Boolean = false)(pathParts: String*): String = {
     pathParts.map(_.trim).filterNot(_ == "")
       .foldLeft("")((url, next) => {
         val priorHasSlash = url.endsWith("/")
-        val nextHasSlash = next.startsWith("/")
+        val nextHasSlash = next.startsWith("/") || (url == "" && !ensureStartingSlash)
 
         (priorHasSlash, nextHasSlash) match {
           case (true, false) => url + next
@@ -42,7 +50,7 @@ object QBRouterUtil {
         }
       })
   }
-  
+
   trait RouteCollector {
     def addAndReturn[R <: QBRoute](route: R): R
   }
