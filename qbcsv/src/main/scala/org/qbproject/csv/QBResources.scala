@@ -1,7 +1,10 @@
-package org.qbproject.api.csv
+package org.qbproject.csv
 
 import java.io.InputStream
-import play.api.libs.json.{JsSuccess, JsError, JsResult}
+import scalaz._
+import Scalaz._
+
+import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 /**
  * A resource represents one CSV file.
@@ -30,11 +33,11 @@ case class QBResourceSet(resources: QBResource*) {
 
   def close() = resources foreach { _.close() }
 
-  def get(identifier: String): JsResult[QBResource] = {
-    resourceMap.get(identifier).fold[JsResult[QBResource]] {
-      JsError(s"Resource $identifier not found.")
+  def get(identifier: String): Validation[NonEmptyList[QBCSVError], QBResource] = {
+    resourceMap.get(identifier).fold[Validation[NonEmptyList[QBCSVError], QBResource]] {
+      QBCSVResourceError(s"Resource $identifier not found.").failNel
     } {
-      JsSuccess(_)
+      _.successNel
     }
   }
 }

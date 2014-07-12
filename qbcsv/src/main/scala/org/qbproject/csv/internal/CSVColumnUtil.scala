@@ -1,24 +1,24 @@
-package org.qbproject.csv
+package org.qbproject.csv.internal
 
-import java.io.{ InputStreamReader, InputStream }
-import scala.util.{ Success, Try }
+import java.io.{InputStream, InputStreamReader}
+
+import au.com.bytecode.opencsv.CSVReader
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import au.com.bytecode.opencsv.CSVReader
-import scala.collection.JavaConversions._
+import org.qbproject.csv.internal.CSVColumnUtil.{CSVException, CSVRow}
 import play.api.libs.json._
-import scala.util.Failure
+
 import scala.Array.canBuildFrom
-import org.qbproject.csv.CSVColumnUtil.CSVRow
-import org.qbproject.csv.CSVColumnUtil.CSVException
+import scala.collection.JavaConversions._
+import scala.util.{Failure, Success, Try}
 
 /**
  * Legacy CSV Parser. Will be removed at some point.
  */
-class CSVColumnUtil[A <: Any](factory: CSVRow => A) {
+class CSVColumnUtil[A <: Any](factory: CSVRow => A, csvChars: (Char, Char) = ';' -> '"') {
 
-  def parse[B](input: InputStream, seperator: Char, quoteChar: Char)(f: List[Try[A]] => List[B] = (x: List[Try[A]]) => x.collect { case Success(s) => s }): List[B] = {
-    val reader = new CSVReader(new InputStreamReader(input, "utf-8"), seperator, quoteChar)
+  def parse[B](input: InputStream)(f: List[Try[A]] => List[B] = (x: List[Try[A]]) => x.collect { case Success(s) => s }): List[B] = {
+    val reader = new CSVReader(new InputStreamReader(input, "utf-8"), csvChars._1, csvChars._2)
     val (headers :: rawRows) = reader.readAll().toList.map(_.map(_.trim).toList)
     val rows = rawRows.map(row => CSVRow(row, headers))
     f(convertRows(rows))
@@ -32,8 +32,8 @@ class CSVColumnUtil[A <: Any](factory: CSVRow => A) {
         }
         if (rowResult.isFailure) {
           val error = rowResult.asInstanceOf[Failure[_]]
-          val errorMessage = "error in row " + (row._2 + 2) + " : " + error.exception.getMessage
-          Failure(CSVException(row._2 + 2, error.exception))
+          val errorMessage = "error in row " + row._2 + " : " + error.exception.getMessage
+          Failure(CSVException(row._2, error.exception))
         } else
           rowResult
     }.toList

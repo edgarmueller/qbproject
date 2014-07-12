@@ -1,12 +1,12 @@
 package org.qbproject.api.csv
 
+import org.qbproject.csv.internal.CSVImporter
 import org.specs2.mutable.Specification
 import org.qbproject.api.schema.QBSchema._
 import java.io.ByteArrayInputStream
 import play.api.libs.json.{ Json, JsError }
 import play.api.data.validation.ValidationError
-import org.qbproject.csv.CSVErrorInfo
-import org.qbproject.csv.CSVImporter
+import org.qbproject.csv._
 
 class CSVErrorAggregationSpec extends Specification {
 
@@ -48,18 +48,8 @@ class CSVErrorAggregationSpec extends Specification {
         "features" -> resource("features.csv", "id")
       )(resourceSet)
 
-      println(result)
-
-      val bla = result.asInstanceOf[JsError].errors.map { pathWithError =>
-        val messages = pathWithError._2.map(_.message).mkString("\n")
-        messages
-      }
-      //      println(bla)
-
-      println(Json.prettyPrint(JsError.toFlatJson(result.asInstanceOf[JsError])))
-      println(JsError.toFlatForm(result.asInstanceOf[JsError]))
-
-      result must beAnInstanceOf[JsError]
+      println(">" + result.left.get)
+      result must beLeft
     }
 
     "report all CSV errors in case both CSV files contain errors" in {
@@ -98,9 +88,30 @@ class CSVErrorAggregationSpec extends Specification {
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)
 
-      println(QBCSVErrorMap(result.asInstanceOf[JsError]).prettyPrint)
-
-      true must beTrue
+      println(result.left.get)
+      result must beLeft
     }
+
+
+    "return multiple errors in case multiple resources do not exist" in {
+      val companyData = """id;company.name;company.openHours
+            1;Dude GmbH;14-18
+            3;Dude GmbH;14-18
+            4x;Dude GmbH;14-18
+            5x;Dude GmbH;14-18
+            2xxx;Nerd Inc.;12-24""".stripMargin
+
+      val companyResource = QBResource("companies.csv", new ByteArrayInputStream(companyData.getBytes("UTF-8")))
+      val featureResource = QBResource("features.csv", new ByteArrayInputStream(featureData.getBytes("UTF-8")))
+      val resourceSet = QBResourceSet(companyResource, featureResource)
+
+      val result = CSVImporter().parse("companies.xy", companySchema -- "products")(
+        "features" -> resource("features.xy", "id")
+      )(resourceSet)
+
+      println(">>>" + result.left.get)
+      result must beLeft
+    }
+
   }
 }

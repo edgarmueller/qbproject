@@ -1,12 +1,13 @@
-package org.qbproject.csv
+package org.qbproject.csv.internal
 
-import play.api.libs.json._
-import scalaz.Validation.fromTryCatch
-import scala.util.Try
-import org.qbproject.schema._
 import org.qbproject.api.schema._
-import CSVColumnUtil._
+import org.qbproject.csv.internal.CSVColumnUtil._
+import org.qbproject.schema._
 import play.api.data.validation.ValidationError
+import play.api.libs.json._
+
+import scala.util.Try
+import scalaz.Validation.fromTryCatch
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 
@@ -62,7 +63,7 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
       .fold[JsResult[JsValue]] {
         JsError(path ->
           ValidationError("Could not find column " + csvHeader + ".",
-            CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+            CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
       } { startIndex =>
         val matchingHeaders = row.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
         val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(row)

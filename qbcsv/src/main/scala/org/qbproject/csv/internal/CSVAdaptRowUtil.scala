@@ -1,21 +1,23 @@
-package org.qbproject.csv
+package org.qbproject.csv.internal
 
-import org.qbproject.csv.CSVColumnUtil.CSVRow
-import play.api.libs.json.{ JsError, JsResult }
 import java.io.InputStreamReader
+
 import au.com.bytecode.opencsv.CSVReader
-import scala.util.{ Try, Failure }
+import org.qbproject.csv.QBResource
+import org.qbproject.csv.internal.CSVColumnUtil.CSVRow
 import play.api.data.validation.ValidationError
+import play.api.libs.json.{JsError, JsResult}
+
 import scala.collection.JavaConversions._
-import org.qbproject.api.csv.{ QBResource }
+import scala.util.{Failure, Try}
 
 class CSVAdaptRowUtil[A <: Any](
-  factory: CSVRow => JsResult[A], joinKeys: Set[ForeignSplitKey] = Set.empty) extends CSVColumnUtil(factory) {
+  factory: CSVRow => JsResult[A], joinKeys: Set[ReverseSplitKey] = Set.empty) extends CSVColumnUtil(factory) {
 
-  def parse(resource: QBResource, separator: Char, quoteChar: Char): List[JsResult[A]] = {
-    val reader = new CSVReader(new InputStreamReader(resource.inputStream, "utf-8"), separator, quoteChar)
+  def parse(resource: QBResource, csvChars: (Char, Char)): List[JsResult[A]] = {
+    val reader = new CSVReader(new InputStreamReader(resource.inputStream, "utf-8"), csvChars._1, csvChars._2)
     val (headers :: rawRows) = reader.readAll().toList.map(_.map(_.trim).toList)
-    val rows = rawRows.zipWithIndex.map(row => CSVRow(row._1, headers, resource.identifier, row._2))
+    val rows = rawRows.zipWithIndex.map(row => CSVRow(row._1, headers, resource.identifier, row._2 + 2))
     val updatedRows = rows.flatMap { row =>
       row.headers.find(header =>
         isForeignSplitKey(header)
@@ -26,7 +28,7 @@ class CSVAdaptRowUtil[A <: Any](
         val ids = row.row(indexOfHeader).split(",").toList
         ids.zip(List.fill(ids.size)(row)).map {
           idWithRow =>
-            CSVRow(idWithRow._2.row.updated(indexOfHeader, idWithRow._1), headers)
+            CSVRow(idWithRow._2.row.updated(indexOfHeader, idWithRow._1), headers, resource.identifier, row.rowNr)
         }
       }
     }
@@ -34,7 +36,7 @@ class CSVAdaptRowUtil[A <: Any](
   }
 
   def isForeignSplitKey(header: String): Boolean = {
-    joinKeys.map(_.foreignKey).contains(header)
+    joinKeys.map(_.secondaryKey).contains(header)
   }
 
   def convertRows(rows: List[CSVRow], resource: QBResource): List[JsResult[A]] = {
@@ -43,14 +45,15 @@ class CSVAdaptRowUtil[A <: Any](
         val rowResult = Try {
           factory(row._1)
         }
+        val rowNr = row._2 + 2
         // CSV parser throws exceptions
         if (rowResult.isFailure) {
           val error = rowResult.asInstanceOf[Failure[_]]
-          val errorMessage = "Error in row " + (row._2 + 2) + " : " +
+          val errorMessage = "Error in row " + rowNr + " : " +
             error.exception.getMessage + "\n"
-          JsError(ValidationError(errorMessage, CSVErrorInfo(resource.identifier, row._2)))
+          JsError(ValidationError(errorMessage, CSVErrorInfo(resource.identifier, rowNr)))
         } else {
-          useParsedResult(rowResult.get, CSVDiagnosis(row._2, resource.identifier))
+          useParsedResult(rowResult.get, CSVDiagnosis(rowNr, resource.identifier))
         }
     }.toList
   }
