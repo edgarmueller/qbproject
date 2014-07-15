@@ -95,6 +95,11 @@ class QBSchemaOps extends QBBaseSchemaOps {
     def --(paths: String*): QBClass = remove(schema, toQBPaths(paths.toList))
 
     /**
+     * Removes all values that are referenced by the list of paths within this schema.
+     */
+    def --(paths: List[String]): QBClass = remove(schema, toQBPaths(paths))
+
+    /**
      * Makes all values referenced by the given list of paths
      * read-only.
      */

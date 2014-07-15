@@ -1,26 +1,26 @@
-package org.qbproject.api.csv
+package org.qbproject.csv.internal
 
-import CSVColumnUtil._
-import java.io.InputStream
-import scala.collection.JavaConversions._
-import scala.util.Try
-import scala.util.Success
-import scala.util.Failure
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.DateTime
-import scala.Array.canBuildFrom
+import java.io.{InputStream, InputStreamReader}
+
 import au.com.bytecode.opencsv.CSVReader
-import java.io.InputStreamReader
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import org.qbproject.csv.internal.CSVColumnUtil.{CSVException, CSVRow}
+import play.api.libs.json._
 
-class CSVColumnUtil[A <: Any](
-  factory: CSVRow => A) {
+import scala.Array.canBuildFrom
+import scala.collection.JavaConversions._
+import scala.util.{Failure, Success, Try}
 
-  def parse[B](input: InputStream, seperator: Char, quoteChar: Char)(f: List[Try[A]] => List[B] = (x: List[Try[A]]) => x.collect { case Success(s) => s }): List[B] = {
-    val reader = new CSVReader(new InputStreamReader(input, "utf-8"), seperator, quoteChar)
+/**
+ * Legacy CSV Parser. Will be removed at some point.
+ */
+class CSVColumnUtil[A <: Any](factory: CSVRow => A, csvChars: (Char, Char) = ';' -> '"') {
+
+  def parse[B](input: InputStream)(f: List[Try[A]] => List[B] = (x: List[Try[A]]) => x.collect { case Success(s) => s }): List[B] = {
+    val reader = new CSVReader(new InputStreamReader(input, "utf-8"), csvChars._1, csvChars._2)
     val (headers :: rawRows) = reader.readAll().toList.map(_.map(_.trim).toList)
-
     val rows = rawRows.map(row => CSVRow(row, headers))
-
     f(convertRows(rows))
   }
 
@@ -32,36 +32,40 @@ class CSVColumnUtil[A <: Any](
         }
         if (rowResult.isFailure) {
           val error = rowResult.asInstanceOf[Failure[_]]
-          val errorMessage = "error in row " + (row._2 + 2) + " : " + error.exception.getMessage
-          //          Logger.info("[CSVImporter] " + error.exception.getStackTraceString)
-          //          Logger.info("[CSVImporter] " + errorMessage)
-          //
-          //          // TODO remove
-          error.exception.printStackTrace()
-          Failure(CSVException(row._2 + 2, error.exception))
+          val errorMessage = "error in row " + row._2 + " : " + error.exception.getMessage
+          Failure(CSVException(row._2, error.exception))
         } else
           rowResult
     }.toList
   }
 }
 
-case class CSVException(rowNr: Int, e: Throwable) extends RuntimeException
-
 object CSVColumnUtil {
 
-  def apply[A <: AnyRef](factory: CSVRow => A) = new CSVColumnUtil(factory)
+  def apply[A <: AnyRef](factory: CSVRow => JsResult[A]) = new CSVColumnUtil(factory)
 
-  case class CSVRow(row: List[String], headers: List[String]) {
+  case class CSVException(rowNr: Int, e: Throwable) extends RuntimeException
+
+  case class CSVRow(row: List[String], headers: List[String], resourceIdentifier: String = "", rowNr: Int = -1) {
     def getColumnData(colName: String): String = {
       val index = headers.indexOf(colName)
       if (index == -1) {
-        throw new RuntimeException("column: " + colName + " not found.")
+        throw new RuntimeException("column: " + colName + " not found.") // in " + headers)
       }
       row(index).trim
     }
   }
 
   def getColumnData(colName: String)(implicit row: CSVRow): String = row.getColumnData(colName)
+
+  def getColumnRange(headers: List[String])(implicit row: CSVRow): List[String] = {
+    val indices = headers.map(h => row.headers.indexOf(h))
+    indices.map(idx => if (idx < row.row.size) row.row(idx) else "")
+  }
+
+  def getColumnRange(startIdx: Int, endIdx: Int)(implicit row: CSVRow): List[String] = {
+    row.headers.slice(startIdx, endIdx).map(getColumnData)
+  }
 
   def getColumnDataAsList(colName: String)(implicit row: CSVRow) = {
     getColumnData(colName).split("\n").map(_.trim).filterNot(_ == "").toList
@@ -73,10 +77,6 @@ object CSVColumnUtil {
       body(wrapped)
     }
   }
-
-  /**
-   *
-   */
 
   def asString(colName: String)(implicit row: CSVRow): String = {
     getColumnData(colName)
@@ -135,3 +135,5 @@ object CSVColumnUtil {
   }
 
 }
+
+
