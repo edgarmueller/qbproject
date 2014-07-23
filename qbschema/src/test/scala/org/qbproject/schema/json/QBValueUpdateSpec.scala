@@ -103,9 +103,8 @@ object QBValueUpdateSpec extends Specification {
       val updatedSchema = schema
         .map[QBDateTime](attr => qbClass("$date" -> qbDateTime))
 
-      val builder = new JsValueUpdateBuilder(updatedSchema).byType[QBClass] {
-        case o: JsObject if o.fieldSet.exists(_._1 == "$date") => o.fieldSet.find(_._1 == "$date").get._2
-        case o => o
+      val builder = new JsValueUpdateBuilder(updatedSchema).byTypeAndPredicate[QBClass](_.hasAttribute("$date")) {
+        case o: JsObject => o.fieldSet.find(_._1 == "$date").get._2
       }
 
       val updatedObject = builder.go(instance)
