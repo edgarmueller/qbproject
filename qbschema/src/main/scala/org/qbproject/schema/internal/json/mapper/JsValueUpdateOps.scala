@@ -5,7 +5,7 @@ import play.api.libs.json.{JsString, JsValue}
 /**
  * Convenience partial functions that may be passed into the map function of a type mapper.
  */
-trait JsTypeMapperOps {
+trait JsValueUpdateOps {
 
   val trim: PartialFunction[JsValue, JsValue] = {
     case JsString(s) => JsString(s.trim)

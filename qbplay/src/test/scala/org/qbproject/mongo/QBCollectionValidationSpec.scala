@@ -6,14 +6,10 @@ import reactivemongo.bson.BSONObjectID
 import org.specs2.mutable.Specification
 import org.joda.time.DateTime
 import org.qbproject.schema.QBSchema._
-import org.qbproject.mongo.MongoSchemaExtensions._
 import org.qbproject.schema.QBClass
-import scala.concurrent.{ Future }
+import scala.concurrent.Future
 
 class QBCollectionValidationSpec extends Specification {
-import org.qbproject.mongo.MongoTransformer
-import org.qbproject.mongo.QBMongoCollection
-import org.qbproject.mongo.MongoSchemaExtensions._
 
 import QBCollectionValidationSpec._
 
@@ -100,7 +96,7 @@ object QBCollectionValidationSpec {
     "d" -> Json.obj("$date" -> date))
 
   val mongoTransformer = new MongoTransformer(sampleSchema)
-  val result = mongoTransformer.write(sampleJson)
+  val result = mongoTransformer.toMongoJson(sampleJson)
 
   val mock = new QBMockupCollection(sampleSchema) with QBCollectionValidation
 

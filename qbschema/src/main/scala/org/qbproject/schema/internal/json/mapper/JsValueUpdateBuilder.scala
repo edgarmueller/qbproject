@@ -14,11 +14,9 @@ import org.qbproject.schema.QBType
  * @param schema
  *               a QB schema
  */
-class JsTypeMapperBuilder(schema: QBType)
+class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty)
   extends JsValueProcessor[Seq[(QBType, QBPath)]]
-  with JsTypeMapperVisitor {
-
-  var mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty
+  with JsValueUpdateVisitor {
 
   /**
    * Allows to created a modified version of the passed JsObject by passing in
@@ -28,11 +26,24 @@ class JsTypeMapperBuilder(schema: QBType)
    *              the partial function that describes how to modify the matched type
    * @return a JsResult containing the possibly modified JsObject
    */
-  def map[A <: QBType : ClassTag](updater: PartialFunction[JsValue, JsValue]): JsTypeMapperBuilder = {
+  def byType[A <: QBType : ClassTag](updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
     val clazz = implicitly[ClassTag[A]].runtimeClass
-    val matcher = (q: QBType) =>  q.getClass.getInterfaces.exists(_ == clazz) || q.getClass == clazz
-    mappings = (matcher -> updater) :: mappings
-    this
+    val matcher = (q: QBType) =>  q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz
+    new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
+  }
+
+  /**
+   * Allows to created a modified version of the passed JsObject by passing in
+   * partial functions that are called if the desired type is encountered.
+   *
+   * @param updater
+   *              the partial function that describes how to modify the matched type
+   * @return a JsResult containing the possibly modified JsObject
+   */
+  def byTypeAndPredicate[A <: QBType : ClassTag](pred: A => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
+    val clazz = implicitly[ClassTag[A]].runtimeClass
+    val matcher = (q: QBType) =>  (q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz) && pred(q.asInstanceOf[A])
+    new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
   }
 
   /**
@@ -43,10 +54,8 @@ class JsTypeMapperBuilder(schema: QBType)
    *              the partial function that describes how to modify the matched type
    * @return a JsResult containing the possibly modified JsObject
    */
-  def map(matcher: QBType => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsTypeMapperBuilder = {
-    mappings = (matcher -> updater) :: mappings
-    this
-  }
+  def byPredicate(matcher: QBType => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder =
+    new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
 
   // TODO: can not map onto same type twice -> test
   /**

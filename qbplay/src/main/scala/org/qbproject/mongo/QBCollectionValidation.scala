@@ -19,7 +19,7 @@ trait QBCollectionValidation extends QBMongoCollection { self: QBMongoCollection
 
   // import the mongo <-> json transformations
   val transform = new MongoTransformer(schema)
-  import transform.{ read => readFromMongo, write => in }
+  import transform.{ fromMongoJson => readFromMongo, toMongoJson => in }
 
   // generic output validation
   private def out(result: JsObject) = {

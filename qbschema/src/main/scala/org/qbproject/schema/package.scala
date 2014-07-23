@@ -1,4 +1,4 @@
-package org.qbproject.api
+package org.qbproject
 
 import play.api.libs.json._
 import org.qbproject.schema._
@@ -12,5 +12,9 @@ package object schema {
 
   implicit class QBTypeExtensionOps(qbType: QBType) {
     def prettyPrint: String = QBSchemaUtil.prettyPrint(qbType)
+  }
+
+  implicit class QBClassExtensionOps(qbClass: QBClass) {
+    def hasAttribute(attributeName: String) = qbClass.attributes.exists(_.name == attributeName)
   }
 }

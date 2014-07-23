@@ -8,14 +8,14 @@ import org.qbproject.schema.internal.json._
 import org.qbproject.schema.internal.json.serialization.JSONSchemaReads
 import org.qbproject.schema.internal.json.serialization.JSONSchemaAnnotationWrites
 import org.qbproject.schema.internal.json.processors.JsDefaultValueProcessor
-import org.qbproject.schema.internal.json.mapper.{JsTypeMapper, JsTypeMapperOps}
+import org.qbproject.schema.internal.json.mapper.{JsValueUpdate, JsValueUpdateOps}
 
 object QBSchema
   extends QBSchemaOps 
   with QBSchemaDSL
   with JSONSchemaReads 
   with JSONSchemaAnnotationWrites
-  with JsTypeMapperOps
+  with JsValueUpdateOps
 
 trait QBValidator extends JsDefaultValueProcessor with JsValidationVisitor {
   def validateJsValue(schema: QBType)(input: JsValue): JsResult[JsValue] =
@@ -34,4 +34,4 @@ object QBPartialValidator extends QBValidator with PartialValidator
 
 case class QBJson(json: JsObject, schema: QBClass)
 
-case class QBTypeMapper[A <: QBType : ClassTag]() extends JsTypeMapper[A]
+case class QBValueUpdate[A <: QBType : ClassTag]() extends JsValueUpdate[A]
