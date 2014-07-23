@@ -9,13 +9,13 @@ import play.api.libs.json.extensions.JsExtensions
 import java.util.Date
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import org.qbproject.schema.internal.json.mapper.JsTypeMapperBuilder
-import org.qbproject.schema.QBTypeMapper
+import org.qbproject.schema.internal.json.mapper.JsValueUpdateBuilder
+import org.qbproject.schema.QBValueUpdate
 import play.api.libs.json.JsString
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject
 
-object QBTypeMapperSpec extends Specification {
+object QBValueUpdateSpec extends Specification {
 
   "Mapping over types" should {
 
@@ -34,14 +34,14 @@ object QBTypeMapperSpec extends Specification {
     "should find all integers" in {
       val schema = qbClass("s" -> qbString, "i" -> qbInteger)
       val instance = Json.obj("s" -> "foo", "i" -> 3)
-      val matchedPaths = QBTypeMapper[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(1)
     }
 
     "find all, also nested, integers" in {
       val schema = qbClass("o" -> qbString, "i" -> qbInteger, "x" -> qbClass("e" -> qbInteger))
       val instance = Json.obj("o" -> "foo", "i" -> 3, "x" -> Json.obj("e" -> 4))
-      val matchedPaths = QBTypeMapper[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(2)
       matchedPaths.get(1) must beEqualTo(JsPath() \ "x" \ "e")
       matchedPaths.get(1) must beEqualTo(JsPath() \ "x" \ "e")
@@ -50,7 +50,7 @@ object QBTypeMapperSpec extends Specification {
     "find integers in an array" in {
       val schema = qbClass("o" -> qbString, "x" -> qbList(qbClass("d" -> qbInteger, "e" -> qbInteger)))
       val instance = Json.obj("o" -> "foo", "x" -> List(Json.obj("d" -> 4, "e" -> 5)))
-      val matchedPaths = QBTypeMapper[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(2)
     }
 
@@ -68,7 +68,7 @@ object QBTypeMapperSpec extends Specification {
           "d" -> 4,
           "e" -> 5)))
 
-      val matchedPaths = QBTypeMapper[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
       val updatedObject = matchedPaths.get.foldLeft(instance)((o, path) => {
         println(o.get(path))
         o.set((path, JsNumber(o.get(path).as[JsNumber].value + 1))).asInstanceOf[JsObject]
@@ -78,7 +78,7 @@ object QBTypeMapperSpec extends Specification {
     }
 
     "find and increment integers in an array via map" in {
-      val updatedObject = QBTypeMapper[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBValueUpdate[QBInteger]().map(schema)(instance) {
         case JsNumber(n) => JsNumber(n + 1)
       }.get
 
@@ -103,9 +103,8 @@ object QBTypeMapperSpec extends Specification {
       val updatedSchema = schema
         .map[QBDateTime](attr => qbClass("$date" -> qbDateTime))
 
-      val builder = new JsTypeMapperBuilder(updatedSchema).map[QBClass] {
-        case o: JsObject if o.fieldSet.exists(_._1 == "$date") => o.fieldSet.find(_._1 == "$date").get._2
-        case o => o
+      val builder = new JsValueUpdateBuilder(updatedSchema).byTypeAndPredicate[QBClass](_.hasAttribute("$date")) {
+        case o: JsObject => o.fieldSet.find(_._1 == "$date").get._2
       }
 
       val updatedObject = builder.go(instance)
@@ -126,7 +125,7 @@ object QBTypeMapperSpec extends Specification {
       val updatedSchema = schema
         .map[QBDateTime](qbType => qbClass("$date" -> qbDateTime))
 
-      val builder = new JsTypeMapperBuilder(updatedSchema).map[QBClass] {
+      val builder = new JsValueUpdateBuilder(updatedSchema).byType[QBClass] {
         case o: JsObject if o.fieldSet.exists(_._1 == "$date") => o.fieldSet.find(_._1 == "$date").get._2
         case o => o
       }
@@ -137,12 +136,12 @@ object QBTypeMapperSpec extends Specification {
     }
 
     "find and uppercase all strings via toUpperCase" in {
-      val updatedObject = QBTypeMapper[QBString]().map(schema)(instance)(toUpperCase).get
+      val updatedObject = QBValueUpdate[QBString]().map(schema)(instance)(toUpperCase).get
       (updatedObject \ "o") must beEqualTo(JsString("FOO"))
     }
 
     "find and convert numbers to strings" in {
-      val updatedObject = QBTypeMapper[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBValueUpdate[QBInteger]().map(schema)(instance) {
         case JsNumber(n) => JsString(n.intValue().toString)
       }.get
 
@@ -150,9 +149,9 @@ object QBTypeMapperSpec extends Specification {
     }
 
     "find and uppercase all strings and increment all ints via mapping builder" in {
-      val mappingBuilder = new JsTypeMapperBuilder(schema).map[QBString] {
+      val mappingBuilder = new JsValueUpdateBuilder(schema).byType[QBString] {
         case JsString(s) => JsString(s.toUpperCase)
-      }.map[QBInteger] {
+      }.byType[QBInteger] {
         case JsNumber(n) => JsNumber(n + 1)
       }
       val updatedObject = mappingBuilder.go(instance)
@@ -181,11 +180,11 @@ object QBTypeMapperSpec extends Specification {
         "e" -> expected)
 
       def formatDate(date: DateTime) = DateTimeFormat.forPattern("dd.MM.yyyy").print(date)
-      val transformer = new JsTypeMapperBuilder(sampleSchema)
-        .map[QBDateTime] {
+      val transformer = new JsValueUpdateBuilder(sampleSchema)
+        .byType[QBDateTime] {
           case JsString(dateTime) => JsString(formatDate(DateTime.parse(dateTime)))
           case j => j
-        }.map[QBPosixTime] {
+        }.byType[QBPosixTime] {
           case JsNumber(time) => JsString(formatDate(new DateTime(time.toLong)))
           case j => j
         }
@@ -210,11 +209,11 @@ object QBTypeMapperSpec extends Specification {
         "n" -> 2)
 
       def formatDate(date: DateTime) = DateTimeFormat.forPattern("dd.MM.yyyy").print(date)
-      val transformer = new JsTypeMapperBuilder(sampleSchema)
-        .map[QBPosixTime] {
+      val transformer = new JsValueUpdateBuilder(sampleSchema)
+        .byType[QBPosixTime] {
           case JsNumber(time) => JsString(formatDate(new DateTime(time.toLong)))
           case j => j
-        }.map[QBNumber] {
+        }.byType[QBNumber] {
           case JsNumber(num) => JsNumber(num + 1)
           case j => j
         }

@@ -10,7 +10,7 @@ import org.qbproject.schema.{QBArray, QBClass, QBPrimitiveType, QBType}
  *
  * The matcher must be implemented by clients.
  */
-trait JsTypeMapperVisitor extends Visitor[Seq[(QBType, QBPath)]] {
+trait JsValueUpdateVisitor extends Visitor[Seq[(QBType, QBPath)]] {
 
   /**
    * Determines whether the visitor adds the type together with the matched path to the result set.
@@ -60,10 +60,11 @@ trait JsTypeMapperVisitor extends Visitor[Seq[(QBType, QBPath)]] {
   def atArray(schema: QBArray, elements: Seq[Seq[(QBType, QBPath)]], path: QBPath,
               jsArray: JsArray): JsResult[Seq[(QBType, QBPath)]] = {
     JsSuccess(if (matcher(schema.items)) {
+      println("flattened elements are " + elements.flatten)
       List.fill(elements.size)(path)
           .zipWithIndex
           .map { case (p, idx) => p.append(QBIdxNode(idx)) }
-          .map(idxPath => (schema.items, idxPath)) ++ elements.flatten
+          .map(idxPath => (schema.items, idxPath))// ++ elements.flatten
     } else {
       elements.flatten
     })

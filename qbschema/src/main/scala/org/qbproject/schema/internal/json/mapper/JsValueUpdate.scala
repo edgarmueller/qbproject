@@ -10,9 +10,9 @@ import org.qbproject.schema.QBType
  * Visitor that finds all types and paths for which the matcher evaluates to true and modifies them via the map
  * method.
  */
-class JsTypeMapper[A <: QBType : ClassTag]()
+class JsValueUpdate[A <: QBType : ClassTag]()
   extends JsValueProcessor[Seq[(QBType, QBPath)]]
-  with JsTypeMapperVisitor {
+  with JsValueUpdateVisitor {
 
   /**
    * @inheritdoc
