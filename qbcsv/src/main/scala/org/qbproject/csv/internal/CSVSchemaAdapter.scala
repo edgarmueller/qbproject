@@ -2,6 +2,7 @@ package org.qbproject.csv.internal
 
 import org.qbproject.csv.internal.CSVColumnUtil._
 import org.qbproject.schema._
+import org.qbproject.schema.internal.QBAdapter
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 

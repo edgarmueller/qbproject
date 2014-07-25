@@ -1,7 +1,6 @@
-package org.qbproject.schema.internal.json
+package org.qbproject.schema.json
 
 import org.specs2.mutable.Specification
-import org.qbproject.schema.internal._
 import org.qbproject.schema._
 import QBSchema._
 import play.api.libs.json._
@@ -70,7 +69,6 @@ object QBValueUpdateSpec extends Specification {
 
       val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
       val updatedObject = matchedPaths.get.foldLeft(instance)((o, path) => {
-        println(o.get(path))
         o.set((path, JsNumber(o.get(path).as[JsNumber].value + 1))).asInstanceOf[JsObject]
       })
       (updatedObject \ "x")(0) \ "d" must beEqualTo(JsNumber(5))
@@ -101,7 +99,7 @@ object QBValueUpdateSpec extends Specification {
           "e" -> 5)))
 
       val updatedSchema = schema
-        .map[QBDateTime](attr => qbClass("$date" -> qbDateTime))
+        .updateByType[QBDateTime](attr => qbClass("$date" -> qbDateTime))
 
       val builder = new JsValueUpdateBuilder(updatedSchema).byTypeAndPredicate[QBClass](_.hasAttribute("$date")) {
         case o: JsObject => o.fieldSet.find(_._1 == "$date").get._2
@@ -123,7 +121,7 @@ object QBValueUpdateSpec extends Specification {
         "x" -> List(Json.obj("$date" -> now)))
 
       val updatedSchema = schema
-        .map[QBDateTime](qbType => qbClass("$date" -> qbDateTime))
+        .updateByType[QBDateTime](qbType => qbClass("$date" -> qbDateTime))
 
       val builder = new JsValueUpdateBuilder(updatedSchema).byType[QBClass] {
         case o: JsObject if o.fieldSet.exists(_._1 == "$date") => o.fieldSet.find(_._1 == "$date").get._2

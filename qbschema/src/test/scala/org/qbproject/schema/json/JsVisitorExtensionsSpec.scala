@@ -1,5 +1,6 @@
-package org.qbproject.schema.internal.json
+package org.qbproject.schema.json
 
+import org.qbproject.schema.internal.json.JsValidationVisitor
 import org.qbproject.schema.internal.json.processors.JsDefaultValueProcessor
 import org.qbproject.schema.internal._
 import org.qbproject.schema._
@@ -39,7 +40,6 @@ class JsVisitorExtensionsSpec extends Specification {
       ))
       val instance = Json.obj()
       val result = JsVisitorTestExtensions.process(schema)(instance)
-      println(result)
       result.get \ "s" must beEqualTo(JsString("foobar"))
     }
   }

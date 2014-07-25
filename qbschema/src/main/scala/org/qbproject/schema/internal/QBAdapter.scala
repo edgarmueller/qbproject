@@ -1,5 +1,6 @@
-package org.qbproject.schema
+package org.qbproject.schema.internal
 
+import org.qbproject.schema._
 import play.api.libs.json._
 
 trait QBAdapter[I] {

@@ -47,7 +47,6 @@ class CSVErrorAggregationSpec extends Specification {
         "features" -> resource("features.csv", "id")
       )(resourceSet)
 
-      println(">" + result.left.get)
       result must beLeft
     }
 
@@ -87,7 +86,6 @@ class CSVErrorAggregationSpec extends Specification {
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)
 
-      println(result.left.get)
       result must beLeft
     }
 
@@ -108,7 +106,6 @@ class CSVErrorAggregationSpec extends Specification {
         "features" -> resource("features.xy", "id")
       )(resourceSet)
 
-      println(">>>" + result.left.get)
       result must beLeft
     }
 

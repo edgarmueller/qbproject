@@ -29,13 +29,14 @@ object QBSchemaUtil {
     case _ => "<no type>"
   }
 
-  def prettyPrint(qbType: QBType, indent: Int = 0): String = qbType match {
+
+  def prettyPrint(qbType: QBType, printAnnotations: Boolean = false, indent: Int = 0): String = qbType match {
     case obj: QBClass => "{\n" +
       obj.attributes.map { field =>
-        " " * (indent + 2)  + field.name + ": " +
-          prettyPrint(field.qbType, indent + 2) + "\n"}.mkString +
+        " " * (indent + 2)  + field.name + ": " + (if (printAnnotations) field.annotations.mkString(",") else "") +
+          prettyPrint(field.qbType, printAnnotations, indent + 2) + "\n"}.mkString +
         " " * indent + "}"
-    case arr: QBArray => "[" + prettyPrint(arr.items, indent) + "]"
+    case arr: QBArray => "[" + prettyPrint(arr.items, printAnnotations, indent) + "]"
     case q => q.toString
   }
 }

@@ -1,8 +1,8 @@
 package org.qbproject.schema
 
 import org.qbproject.schema.internal._
-import play.api.libs.json._
 import scala.reflect.ClassTag
+import scalaz._
 
 class QBSchemaOps extends QBBaseSchemaOps {
 
@@ -13,130 +13,299 @@ class QBSchemaOps extends QBBaseSchemaOps {
    */
   implicit class QBSchemaOps(schema: QBClass) {
 
-    def follow[A <: QBType](path: QBStringPath): A = resolvePath[A](schema)(path)
-
     /**
-     * Renames the field located at the given path.
+     * Resolves the given path on this schema.
      *
-     * Example: Given an schema <code>obj("a" -> obj("b" -> integer))</code>
-     * rename(List("a","b"), "c") will change the object to
-     * <code>obj("a" -> obj("c" -> integer))</code>.
+     * @param path
+     *           the path to be resolved
+     * @tparam A
+     *           the expected type
+     * @return the resolved sub-schema
      */
-    def rename(path: QBStringPath, newFieldName: String): QBClass = renameField(schema)(path, newFieldName)
-
-    def rename(oldName: String, newName: String): QBClass = renameField(schema)(oldName, newName)
+    def resolve[A <: QBType](path: QBStringPath): A = resolvePath[A](schema)(path)
 
     /**
-     * Retains all fields of the object at the given path based
-     * on the name of the fields.
+     * Renames the attribute located at the given path.
+     * <br>
+     * Example: Given a schema <code>{ a: { b: int } }</code>,
+     * <code>rename("a.b", "c")</code> will change the object to
+     * <code>{ a: { c: int }}</code>.
+     *
+     * @param path
+     *             the complete path to the attribute to be renamed
+     * @param newAttributeName
+     *             the new name of the attribute
+     *
+     * @return the updated schema containing the renamed attribute
      */
-    def keep(path: QBStringPath, fields: List[String]): QBClass = retain(schema)(path, fields)
+    def rename(path: QBStringPath, newAttributeName: String): QBClass =
+      renameAttribute(schema)(path, newAttributeName)
+
+    /**
+     * Renames a attribute.
+     *
+     * <br>
+     * Example: Given a schema <code>{ a: { b: int } }</code>,
+     * <code>rename("a", "c")</code> will change the object to
+     * <code>{ c: { b: int }}</code>.
+     *
+     * @param oldAttributeName
+     *              the attribute to be renamed
+     * @param newAttributeName
+     *              the new name of the attribute
+     *
+     * @return the updated schema containing the renamed attribute
+     */
+    def rename(oldAttributeName: String, newAttributeName: String): QBClass =
+      renameAttribute(schema)(oldAttributeName, newAttributeName)
+
+    /**
+     * Retains all given attribute names of this schema at the given path.
+     *
+     * @param path
+     *             the path to the attributes to be kept
+     * @param attributeNames
+     *             the attributes to be kept
+     *
+     * @return the updated schema containing only the specified attributes at the given path
+     */
+    def keep(path: QBStringPath, attributeNames: List[String]): QBClass =
+      retain(schema)(path, attributeNames)
 
     /**
      * Synonym for keep(QBStringPath, List[String]).
+     *
+     * @param path
+     *         the path to the attributes to be kept
+     * @param attributeNames
+     *         the attributes to be kept
+     *
+     * @return the updated schema containing only the specified attributes at the given path
      */
-    def keepAt(path: QBStringPath, fields: String*): QBClass = retain(schema)(path, fields)
+    def keepAt(path: QBStringPath, attributeNames: String*): QBClass = 
+      retain(schema)(path, attributeNames)
 
     /**
-     * Retains all fields of the object.
+     * Retains all given attributes of this schema.
+     *
+     * @param attributes
+     *         the attributes to be kept
+     *
+     * @return the updated schema containing only the specified attributes
      */
-    def keep(fields: String*): QBClass = retain(schema)("", fields)
+    def keep(attributes: String*): QBClass = retain(schema)("", attributes)
 
     /**
-     * Retains all fields of the object.
+     * Retains all fields of this schema
+     *
+     * @param attributes
+     *          the attributes to be kept
+     *
+     * @return the updated schema containing only the specified attributes
      */
-    def keep(fields: List[String]): QBClass = retain(schema)("", fields)
-
+    def keep(attributes: List[String]): QBClass = retain(schema)("", attributes)
 
     /**
      * Makes all values referenced by the given list of paths
      * optional.
+     *
+     * @param paths
+     *              the paths to be marked as optional
+     *
+     * @return the updated schema with the specified paths being marked as optional
      */
     def ?(paths: String*): QBClass = makeOptional(schema, paths.toList.map(string2QBPath))
 
     /**
-     * Adds the given field to the object located at the path of this schema.
+     * Makes all values referenced by the given list of paths
+     * optional.
+     *
+     * @param subSchema
+     *              the sub-schema to be marked as optional
+     *
+     * @return the updated schema with the sub-schema being marked as optional
      */
-    def +(path: String, attr: QBAttribute): QBClass = add(schema)(path, List(attr))
+    def ?(subSchema: QBClass): QBClass = pathOfSubSchema(schema, subSchema).fold {
+      schema
+    } { subPath =>
+      val optionalSubSchema = subSchema.updateAttributes(_ => true)(attr => attr.addAnnotation(QBOptionalAnnotation()))
+      update[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => optionalSubSchema)
+    }
 
     /**
-      * Adds the given field to the object.
-      */
+     * Adds the given attribute at the path of this schema.
+     *
+     * @param path
+     *             the path at which the new attribute should be inserted
+     * @param attr
+     *             the attribute to be added
+     *
+     * @return the updated schema containing the additional attribute
+     */
+    def +(path: QBStringPath, attr: QBAttribute): QBClass = add(schema)(path, List(attr))
+
+    /**
+     * Adds the given attribute to the root of this schema.
+     *
+     * @param attr
+     *             the attribute to be added
+     *
+     * @return the updated schema containing the additional attribute
+     */
     def +(attr: QBAttribute): QBClass = add(schema)("", List(attr))
 
     /**
-     * Merges the fields of the given objects with this schema.
+     * Merges the attributes of the given schema into this schema.
+     *
+     * @param otherSchema
+     *           the schema to be merged with this schema
+     *
+     * @return the updated schema containing the additional attributes from the other schema
      */
-    def ++(obj: QBClass): QBClass = merge(schema, obj)
+    def ++(otherSchema: QBClass): QBClass = merge(schema, otherSchema)
 
     /**
-     * Adds the given fields to the object located at the path of the given object.
+     * Adds the given attributes at the path of the this schema.
+     * 
+     * @param path
+     *           the path at which to insert the attributes
+     * @param attributes
+     *           the attributes to be added
+     *
+     * @return the updated schema containing the additional attributes at the specified path
      */
-    def ++(path: String, fields: QBAttribute*): QBClass = add(schema)(path, fields.toList)
+    def ++(path: String, attributes: QBAttribute*): QBClass = add(schema)(path, attributes.toList)
 
     /**
-     * Adds the given fields to the object.
+     * Adds the given attributes to the root of this schema.
+     *
+     * @param attributes
+     *            the attributes to be added
+     *
+     * @return the updated schema containing the additional attributes at the root level
      */
-    def ++(fields: QBAttribute*): QBClass = add(schema)("", fields.toList)
+    def ++(attributes: QBAttribute*): QBClass = add(schema)("", attributes.toList)
 
     /**
-     * Removes all fields from this schema that are part of the given object.
+     * Removes all fields from this schema that are part of the given schema.
+     * 
+     * @param otherSchema
+     *            the schema whose attributes should be removed from this schema
+     *
+     * @return the updated schema with the attributes of the other schema being removed
      */
-    def --(obj: QBClass): QBClass = extract(schema, obj)
+    def --(otherSchema: QBClass): QBClass = extract(schema, otherSchema)
 
     /**
-     * Removes the value referenced by the path within this schema.
+     * Removes the attribute referenced by the path within this schema.
+     *
+     * @param path
+     *           the path to the attribute to be removed
+     *
+     * @return the updated schema with the attribute being removed
      */
     def -(path: String): QBClass = remove(schema, toQBPaths(List(path)))
 
     /**
-     * Removes all values that are referenced by the list of paths within this schema.
+     * Removes all attributes that are referenced by the list of paths within this schema.
+     *
+     * @param paths
+     *           the paths to the attributes to be removed
+     *
+     * @return the updated schema with the attributes being removed
      */
     def --(paths: String*): QBClass = remove(schema, toQBPaths(paths.toList))
 
     /**
      * Removes all values that are referenced by the list of paths within this schema.
+     *
+     * @param paths
+     *           the paths to the attributes to be removed
+     *
+     * @return the updated schema with the attributes being removed
      */
     def --(paths: List[String]): QBClass = remove(schema, toQBPaths(paths))
 
     /**
      * Makes all values referenced by the given list of paths
      * read-only.
+     *
+     * @param paths
+     *           the paths to the attributes to be marked as read-only
+     *
+     * @return the updated schema with the given paths being marked as read-only
      */
     def readOnly(paths: String*) = makeReadOnly(schema, toQBPaths(paths.toList))
 
     /**
-     * Map over the schema by type.
+     * Marks all attributes of the given sub-schema as read-only.
      *
-     * @param modifier
-     * the modifier that is to be applied onto matched attributes
-     * @tparam A
-     * the type to be matched
-     * @return the modified schema
+     * @param subSchema
+     *                  the sub-schema whose attributes should be marked as read-only
+     *
+     * @return the updated schema, if the sub-schema exists, the unchanged schema otherwise
      */
-    def map[A <: QBType : ClassTag](modifier: QBType => QBType): QBClass = {
+    def readOnly(subSchema: QBClass) = {
+      pathOfSubSchema(schema, subSchema).fold {
+        schema
+      } { subPath =>
+        val readOnlySubSchema = subSchema.updateAttributes(_ => true)(_.addAnnotation(QBReadOnlyAnnotation()))
+        update[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => readOnlySubSchema)
+      }
+    }
+
+    /**
+     * Update this schema by predicate.
+     *
+     * @param predicate
+     *            the predicate that needs to evaluate to true in order to execute the update function
+     * @param updateFn
+     *            the update function
+     * @return the updated schema
+     */
+    def updateByPredicate(predicate: QBType => Boolean, updateFn: QBType => QBType): QBClass =
+      update(schema)(predicate)(updateFn).asInstanceOf[QBClass]
+
+
+    /**
+     * Update this schema by type.
+     *
+     * @param updateFn
+     *           the update function
+     * @tparam A
+     *           the type that needs to be matched in order for the update function to be executed
+     * @return the updated schema
+     */
+    def updateByType[A <: QBType : ClassTag](updateFn: QBType => QBType): QBClass = {
       val clazz = implicitly[ClassTag[A]].runtimeClass
-      mapTypesByPredicate(schema)(qbType => clazz.isInstance(qbType))(modifier).asInstanceOf[QBClass]
+      update(schema)(qbType => clazz.isInstance(qbType))(updateFn).asInstanceOf[QBClass]
     }
 
     // TODO: caller must cast to object
-    def mapOverAttributes(predicate: QBAttribute => Boolean)(modifier: QBAttribute => QBAttribute) =
-      mapAttributes(schema)(predicate)(modifier)
-
-    def foldOverAttributes[A](matcher: QBType => Boolean)(modifier: (QBAttribute, JsPath) => A): Seq[A] =
-      foldAttributesByTypeWithPath[A](matcher)(schema, JsPath(), List.empty)(modifier)
-
-      /**
-       * Map over the schema by predicate.
-       *
-       * @param predicate
-     * the predicate that is used for matching
-       * @param modifier
-     * the modifier that is to be applied onto matched attributes
-       * @return the modified schema
+    /**
+     * Updates all attributes for which the given predicate evaluates to true.
+     *
+     * @param predicate
+     *                 the predicate that must be fulfilled in order to update the attribute
+     * @param updateFn
+     *                 the update function
+     * @return the updated schema
      */
-    def map(predicate: QBType => Boolean, modifier: QBType => QBType): QBClass =
-      mapTypesByPredicate(schema)(predicate)(modifier).asInstanceOf[QBClass]
+    def updateAttributes(predicate: QBAttribute => Boolean)(updateFn: QBAttribute => QBAttribute): QBType =
+      updateAttributeByPredicate(schema)(predicate)(updateFn)
+
+    /**
+     * Checks if a given predicate holds for all attributes.
+     *
+     * @param predicate
+     *            the predicate that should be evaluated against all attributes
+     * @return true, if the predicate holds for all attributes, false otherwise
+     */
+    def forAll(predicate: QBAttribute => Boolean): Boolean = {
+      import std.anyVal.booleanInstance.conjunction
+      implicit val M = conjunction
+      collapse(schema)(predicate)
+    }
 
     /**
      * Compares the schema to another schema.
@@ -157,9 +326,5 @@ class QBSchemaOps extends QBBaseSchemaOps {
      */
     def isSubSetOf(otherSchema: QBClass): Boolean =
       isSubSet(schema, otherSchema)
-
-    def adapt[A](adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] =
-      adaptSchema(schema, JsPath(), adapter)
   }
 }
-

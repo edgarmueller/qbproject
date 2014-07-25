@@ -188,7 +188,7 @@ case class RegexRule(regex: String) extends ValidationRule[JsString] {
  *           the valid strings
  */
 case class EnumRule(enum: List[String]) extends ValidationRule[JsString] {
-  def isValid(str: JsString) = enum.exists(_ == str.value)
+  def isValid(str: JsString) = enum.contains(str.value)
   val errorMessage = "qb.string.enum.violated"
 }
 
