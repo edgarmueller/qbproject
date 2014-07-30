@@ -111,16 +111,16 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
   private def injectJoinKeys(schema: QBClass, resourceMapping: ResourceMapping): Validation[NonEmptyList[QBCSVError], List[QBType]] = {
     val x: List[Validation[NonEmptyList[QBCSVError], QBType]] = resourceMapping.map { mappedResource =>
       val (key, secondaryKey) = mappedResource.resourceRef.joinKeys.toTuple
-      schema.follow[QBType](mappedResource.attributeName) match {
+      schema.resolve[QBType](mappedResource.attributeName) match {
         case cls: QBClass =>
-          Success(cls ++ (secondaryKey -> schema.follow[QBType](key)))
+          Success(cls ++ (secondaryKey -> schema.resolve[QBType](key)))
         case arr: QBArray => arr.items match {
           // join key already in array contained type
           case c: QBClass if c.attributes.map(_.name).contains(secondaryKey) =>
             arr.items.successNel
           // assumes array contains a class, where we can mix in the join key
           case c: QBClass =>
-            (c ++ (secondaryKey -> schema.asInstanceOf[QBClass].follow[QBType](key))).successNel
+            (c ++ (secondaryKey -> schema.asInstanceOf[QBClass].resolve[QBType](key))).successNel
           case _ =>
             QBCSVJoinError(mappedResource.resourceRef.resourceIdentifier,
               s"Join key $secondaryKey can not be mixed into array containing primitive type."
@@ -253,10 +253,9 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
     } yield {
       val contents = internalParse(qbType, resource)(secondarySplitKeys.toSet)
       sequenceJsResults(contents) match {
-        case err: JsError => {
+        case err: JsError =>
           val x = QBCSVErrorMap.bla(err)
           Failure(NonEmptyList(x.head, x.tail:_*))
-        }
         case JsSuccess(value, _) => value.successNel
       }
     }

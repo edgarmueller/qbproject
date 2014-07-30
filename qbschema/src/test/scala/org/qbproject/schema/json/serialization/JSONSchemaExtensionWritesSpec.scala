@@ -1,4 +1,4 @@
-package org.qbproject.schema.internal.json.serialization
+package org.qbproject.schema.json.serialization
 
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

@@ -60,7 +60,6 @@ trait JsValueUpdateVisitor extends Visitor[Seq[(QBType, QBPath)]] {
   def atArray(schema: QBArray, elements: Seq[Seq[(QBType, QBPath)]], path: QBPath,
               jsArray: JsArray): JsResult[Seq[(QBType, QBPath)]] = {
     JsSuccess(if (matcher(schema.items)) {
-      println("flattened elements are " + elements.flatten)
       List.fill(elements.size)(path)
           .zipWithIndex
           .map { case (p, idx) => p.append(QBIdxNode(idx)) }

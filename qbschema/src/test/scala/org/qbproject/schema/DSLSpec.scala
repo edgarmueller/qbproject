@@ -1,7 +1,6 @@
-package org.qbproject.schema.internal
+package org.qbproject.schema
 
 import org.specs2.mutable.Specification
-import org.qbproject.schema.{QBValidator, QBSchema}
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import scala.math.BigDecimal.long2bigDecimal

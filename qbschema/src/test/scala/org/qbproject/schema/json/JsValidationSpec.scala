@@ -1,4 +1,4 @@
-package org.qbproject.schema.internal.json
+package org.qbproject.schema.json
 
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
@@ -352,7 +352,6 @@ object JsValidationSpec extends Specification {
         "i" -> 9,
         "j" -> "fALSE")
       val result = QBValidator.validate(schema)(instance)
-      println(result)
       result.asOpt must beSome
     }
 

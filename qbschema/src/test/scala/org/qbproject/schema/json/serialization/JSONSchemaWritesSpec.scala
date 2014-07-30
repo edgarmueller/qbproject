@@ -1,4 +1,4 @@
-package org.qbproject.schema.internal.json.serialization
+package org.qbproject.schema.json.serialization
 
 import play.api.libs.json.Json
 import org.qbproject.schema.{QBType, QBSchema}

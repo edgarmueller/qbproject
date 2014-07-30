@@ -1,5 +1,6 @@
-package org.qbproject.schema.internal
+package org.qbproject.schema
 
+import org.qbproject.schema.internal.QBSchemaUtil
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
 import org.junit.runner.RunWith
@@ -21,7 +22,7 @@ object SchemaCombinatorsSpec extends Specification {
 
     "add a field to an existing path" in {
       val updatedSchema = schema ++ ("o.n", "e" -> qbNumber)
-      updatedSchema.follow[QBNumber]("o.n.e") must beAnInstanceOf[QBNumber]
+      updatedSchema.resolve[QBNumber]("o.n.e") must beAnInstanceOf[QBNumber]
     }
 
     "add a field to an existing path directly" in {
@@ -32,7 +33,7 @@ object SchemaCombinatorsSpec extends Specification {
 
     "add multiple fields to an existing path" in {
       val updatedSchema = schema ++ ("o", "e" -> qbNumber, "xx" -> qbString)
-      val resolved = updatedSchema.follow[QBClass]("o")
+      val resolved = updatedSchema.resolve[QBClass]("o")
       resolved.attributes.size must beEqualTo(3)
     }
 
@@ -55,13 +56,13 @@ object SchemaCombinatorsSpec extends Specification {
 
     "remove multiple fields from an existing path" in {
       val updatedSchema = schema -- ("o.n.s", "o.n.t")
-      val resolved = updatedSchema.follow[QBClass]("o.n")
+      val resolved = updatedSchema.resolve[QBClass]("o.n")
       resolved.attributes.size must beEqualTo(1)
     }
 
     "make a field optional on an existing path" in {
       val updatedSchema = schema ? "o.n"
-      val resolved = updatedSchema.follow[QBClass]("o")
+      val resolved = updatedSchema.resolve[QBClass]("o")
       val n = resolved.attributes.find(_.name == "n")
       // TODO: provide convenience methods via implicit classes
       n.get.annotations.find(_.isInstanceOf[QBOptionalAnnotation]) must beSome
@@ -69,7 +70,7 @@ object SchemaCombinatorsSpec extends Specification {
 
     "make multiple fields optional on an existing path" in {
       val updatedSchema = schema ? ("o.n.s", "o.n.t")
-      val resolved = updatedSchema.follow[QBClass]("o.n")
+      val resolved = updatedSchema.resolve[QBClass]("o.n")
       val n = resolved.attributes.find(_.name == "s")
       val t = resolved.attributes.find(_.name == "t")
       n.get.annotations.find(_.isInstanceOf[QBOptionalAnnotation]) must beSome
@@ -78,18 +79,26 @@ object SchemaCombinatorsSpec extends Specification {
 
     "make a field read-only on an existing path" in {
       val updatedSchema = schema readOnly "o.n"
-      val resolved = updatedSchema.follow[QBClass]("o")
+      val resolved = updatedSchema.resolve[QBClass]("o")
       val n = resolved.attributes.find(_.name == "n")
       n.get.annotations.find(_.isInstanceOf[QBReadOnlyAnnotation]) must beSome
     }
 
     "make multiple fields read-only on an existing path" in {
       val updatedSchema = schema readOnly ("o.n.s", "o.n.t")
-      val resolved = updatedSchema.follow[QBClass]("o.n")
+      val resolved = updatedSchema.resolve[QBClass]("o.n")
       val n = resolved.attributes.find(_.name == "s")
       val t = resolved.attributes.find(_.name == "t")
       n.get.annotations.find(_.isInstanceOf[QBReadOnlyAnnotation]) must beSome
       t.get.annotations.find(_.isInstanceOf[QBReadOnlyAnnotation]) must beSome
+    }
+
+    "make sub-schema read-only" in {
+      val s  = schema readOnly("o")
+      val subSchema = s.resolve[QBClass]("o.n")
+      val updatedSchema = s readOnly subSchema
+      val resolved = updatedSchema.resolve[QBClass]("o.n")
+      resolved forAll (_.annotations.exists(_.isInstanceOf[QBReadOnlyAnnotation])) must beTrue
     }
 
     "not be able to remove a field from an non-existing leaf path" in {
@@ -112,14 +121,14 @@ object SchemaCombinatorsSpec extends Specification {
 
     "be able to rename a field on an existing path" in {
       val updatedSchema = schema rename ("o.n", "e")
-      val resolved = updatedSchema.follow[QBClass]("o.e")
+      val resolved = updatedSchema.resolve[QBClass]("o.e")
       resolved must beAnInstanceOf[QBClass]
     }
 
     "be able to rename a field" in {
       val schema = qbClass("x" -> qbString)
       val updatedSchema = schema rename ("x", "y")
-      val resolved = updatedSchema.follow[QBString]("y")
+      val resolved = updatedSchema.resolve[QBString]("y")
       resolved must beAnInstanceOf[QBString]
     }
 
@@ -136,13 +145,13 @@ object SchemaCombinatorsSpec extends Specification {
 
     "be able to keep fields on a existing path" in {
       val updatedSchema = schema keep ("o.n", List("s"))
-      val resolved = updatedSchema.follow[QBClass]("o.n")
+      val resolved = updatedSchema.resolve[QBClass]("o.n")
       resolved.attributes.size must beEqualTo(1)
     }
 
     "be able to keep fields on a root path" in {
       val updatedSchema = schema keep ("", List("o"))
-      val resolved = updatedSchema.follow[QBClass]("o")
+      val resolved = updatedSchema.resolve[QBClass]("o")
       resolved.attributes.size must beEqualTo(1)
     }
 
@@ -161,7 +170,7 @@ object SchemaCombinatorsSpec extends Specification {
     "not be able to remove a fields from an existing flat path" in {
       val schema = qbClass("o" -> qbString)
       val updatedSchema = schema - "o"
-      updatedSchema.follow[QBClass]("o") must throwA[RuntimeException]
+      updatedSchema.resolve[QBClass]("o") must throwA[RuntimeException]
     }
 
     "add objects" in {
@@ -182,19 +191,19 @@ object SchemaCombinatorsSpec extends Specification {
 
     "rename attribute by type" in {
       val schema = qbClass("o" -> qbString)
-      val updated = schema.mapOverAttributes(_.qbType.isInstanceOf[QBString])(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
+      val updated = schema.updateAttributes(_.qbType.isInstanceOf[QBString])(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
       updated.attributes.exists(_.name == "o2") must beTrue
     }
 
     "rename attribute" in {
       val schema = qbClass("o" -> qbString)
-      val updated = schema.mapOverAttributes(_.name == "o")(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
+      val updated = schema.updateAttributes(_.name == "o")(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
       updated.attributes.exists(_.name == "o2") must beTrue
     }
 
     "rename object attribute" in {
       val schema = qbClass("o" -> qbClass("s" -> qbString))
-      val updated = schema.mapOverAttributes(_.name == "o")(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
+      val updated = schema.updateAttributes(_.name == "o")(attr => QBAttribute("o2", attr.qbType)).asInstanceOf[QBClass]
       updated.attributes.exists(_.name == "o2") must beTrue
     }
 
@@ -206,7 +215,7 @@ object SchemaCombinatorsSpec extends Specification {
             "t" -> qbInteger,
             "v" -> qbNumber))))
 
-      val updated = update[QBClass](List("o", "n"), schema, obj => {
+      val updated = update[QBClass](schema, List("o", "n"), obj => {
         val fields = obj.attributes
         QBClassImpl(fields :+ QBAttribute("vv", qbNumber))
       })

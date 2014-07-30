@@ -21,7 +21,7 @@ class MongoTransformer(schema: QBClass,
 
   protected def toExtendedJsonSchema(schema: QBClass): QBClass = {
     extendedJsonKeys.foldLeft(schema)((s, x) =>
-      s.map(a => x._1.isInstance(a), attr => qbClass(x._2 -> attr))
+      s.updateByPredicate(a => x._1.isInstance(a), attr => qbClass(x._2 -> attr))
     )
   }
 
