@@ -23,7 +23,7 @@ object QBBuild extends Build {
     Seq(
       organization := "org.qbproject",
       version := QBVersion,
-      scalaVersion := "2.10.2",
+      scalaVersion := "2.10.4",
       licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
       EclipseKeys.projectFlavor := EclipseProjectFlavor.Scala,
       EclipseKeys.skipParents in ThisBuild := false,
