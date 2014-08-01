@@ -18,7 +18,7 @@ trait QBCollectionValidation extends QBMongoCollection { self: QBMongoCollection
   def schema: QBClass
 
   // import the mongo <-> json transformations
-  val transform = new MongoTransformer(schema)
+  lazy val transform = new MongoTransformer(schema)
   import transform.{ fromMongoJson => readFromMongo, toMongoJson => in }
 
   // generic output validation
