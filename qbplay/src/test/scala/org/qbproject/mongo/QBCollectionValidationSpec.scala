@@ -39,11 +39,11 @@ import QBCollectionValidationSpec._
     }
 
     "validate update with id" in {
-      mock.update("someId", sampleJson) must beEqualTo(sampleJson).await
+      mock.update(id, sampleJson) must beEqualTo(sampleJson).await
     }
 
     "validate update with id and partial input" in {
-      mock.update("someId", Json.obj("d" -> date)) must beEqualTo(sampleJson).await
+      mock.update(id, sampleWithDateOnly) must beEqualTo(sampleJson).await
     }
 
     "validate update with query" in {
@@ -130,18 +130,20 @@ object QBCollectionValidationSpec {
 
     override def update(id: ID, update: JsObject): Future[JsObject] = {
       if ((update == mongoJson) ||
-          (update == mongoWithDateOnly)) 
+          (update == mongoWithDateOnly)) {
         Future.successful(mongoJson)
-      else 
+      } else {
         Future.failed(null)
+      }
     }
 
     override def update(query: JsObject, update: JsObject): Future[JsObject] = {
       if ((query == sampleJson) &&
-          (update == mongoJson))
+          (update == mongoJson)) {
         Future.successful(mongoJson)
-      else
+      } else {
         Future.failed(null)
+      }
     }
 
     override def create(obj: JsObject): Future[JsObject] = {

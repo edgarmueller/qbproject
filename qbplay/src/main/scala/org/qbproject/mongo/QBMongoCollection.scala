@@ -72,7 +72,17 @@ class QBMongoCollection(collectionName: String)(db: DB) {
       else throw new RuntimeException("oh noes."))
   }
 
-  def update(id: ID, update: JsObject): Future[JsObject] = this.update(Json.obj("_id" -> Json.obj("$oid" -> id)), update)
+  def update(id: ID, update: JsObject): Future[JsObject] = {
+    val query = Json.obj("_id" -> Json.obj("$oid" -> id))
+    val updateJson = update \ "$set" match {
+      case un: JsUndefined => Json.obj("$set" -> update)
+      case _ => update
+    }
+    this.findAndModify(query, updateJson).map {
+      case Some(js) => js
+      case None     => throw new RuntimeException("No Result found.")
+    }
+  }
 
   def update(query: JsObject, update: JsObject): Future[JsObject] = {
     val updateJson = update \ "$set" match {
