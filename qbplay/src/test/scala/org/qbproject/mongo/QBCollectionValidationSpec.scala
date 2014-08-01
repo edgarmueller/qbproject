@@ -98,10 +98,12 @@ object QBCollectionValidationSpec {
   val mongoTransformer = new MongoTransformer(sampleSchema)
   val result = mongoTransformer.toMongoJson(sampleJson)
 
-  val mock = new QBMockupCollection(sampleSchema) with QBCollectionValidation
+  val mock = new QBMockupCollection with QBCollectionValidation {
+    val schema = sampleSchema // also test lazy init of the anonymous class here
+  }
 
   // sample collection
-  class QBMockupCollection(val schema: QBClass) extends QBMongoCollection(null)(null) {
+  class QBMockupCollection extends QBMongoCollection(null)(null) {
     override def getCount = Future.successful(1)
 
     override def getAll(skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = {
