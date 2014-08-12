@@ -61,28 +61,42 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
     row.headers.find(_.contains(csvHeader))
       .map(matchedHeader => row.headers.indexOf(matchedHeader))
       .fold[JsResult[JsValue]] {
-        JsError(path ->
-          ValidationError("Could not find column " + csvHeader + ".",
-            CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
-      } { startIndex =>
-        val matchingHeaders = row.headers.drop(startIndex).takeWhile { _.startsWith(csvHeader) }
-        val strList = CSVColumnUtil.getColumnRange(matchingHeaders)(row)
-        val qbType = schema.items
-
-        val childElements = (0 until strList.size).map {
-          idx => convert(qbType, path(idx), Seq.empty)
-        }
-
-        if (!childElements.exists(_.asOpt.isEmpty)) {
-          JsSuccess(JsArray(childElements.collect {
-            case (JsSuccess(s, p)) => s
-          }))
-        } else {
-          JsError(childElements.collect {
-            case JsError(err) => err
-          }.reduceLeft(_ ++ _))
-        }
+      JsError(path ->
+        ValidationError("Could not find column " + csvHeader + ".",
+          CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
+    } { startIndex =>
+      val matchingHeaders = row.headers.drop(startIndex).takeWhile {
+        _.startsWith(csvHeader)
       }
+      val qbType = schema.items
+
+      val div = qbType match {
+        case qbClass: QBClass => qbClass.attributes.size // TODO: what about optionals?
+        case _ => 1
+      }
+
+      val matchedValues = (for {
+        group <- CSVColumnUtil.getColumnRange(matchingHeaders)(row).grouped(div).toList
+        if group.exists(!_.trim.isEmpty)
+      } yield {
+        group
+      }).flatten
+      println(matchedValues)
+
+      val childElements = (0 until matchedValues.size / div).map {
+        idx => convert(qbType, path(idx), Seq.empty)
+      }
+
+      if (!childElements.exists(_.asOpt.isEmpty)) {
+        JsSuccess(JsArray(childElements.collect {
+          case (JsSuccess(s, p)) => s
+        }))
+      } else {
+        JsError(childElements.collect {
+          case JsError(err) => err
+        }.reduceLeft(_ ++ _))
+      }
+    }
 
   }
 

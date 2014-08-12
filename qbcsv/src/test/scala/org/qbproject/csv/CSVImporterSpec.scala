@@ -7,6 +7,7 @@ import org.qbproject.schema.QBSchema._
 import org.qbproject.csv.internal.CSVImporter
 import org.specs2.mutable.Specification
 import play.api.libs.json.{JsArray, JsString, _}
+import play.api.libs.json.Json._
 
 object CSVImporterSpec extends Specification {
 
@@ -176,7 +177,7 @@ object CSVImporterSpec extends Specification {
         "employees" -> Json.arr(
           Json.obj(
             "name" -> "Eddy",
-            "tags" -> Json.arr("dev", "")
+            "tags" -> Json.arr("dev")
           ),
           Json.obj(
             "name" -> "Otto",
@@ -218,7 +219,7 @@ object CSVImporterSpec extends Specification {
         "employees" -> Json.arr(
           Json.obj(
             "name" -> "Eddy",
-            "tags" -> Json.arr("dev", "")
+            "tags" -> Json.arr("dev")
           ),
           Json.obj(
             "name" -> "Otto",
@@ -226,7 +227,7 @@ object CSVImporterSpec extends Specification {
           ),
           Json.obj(
             "name" -> "Max",
-            "tags" -> Json.arr("senior architect", "" )
+            "tags" -> Json.arr("senior architect")
           )
         ),
         "features" -> Json.arr(
@@ -547,6 +548,49 @@ object CSVImporterSpec extends Specification {
           "second" -> "2"), Json.obj(
           "first" -> "3",
           "second" -> "4"))))
+    }
+
+    "allow objects in arrays to span multiple columns" in {
+
+      val csv =
+        """persons[0].name; persons[0].age; persons[1].name; persons[1].age
+          |foo; 1234;    ;
+          |Edd; 1337; Odd; 31337""".stripMargin
+
+      val arrayItem = qbClass(
+        "name" -> qbString,
+        "age" -> qbNumber
+      )
+
+      val schema = qbClass(
+        "persons" -> qbList(arrayItem)
+      )
+
+      val importer = CSVImporter()
+
+      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+
+      result must beRight
+      result.right.get(0) must beEqualTo(obj(
+        "persons" -> arr(
+          obj(
+            "name" -> "foo",
+            "age" -> 1234
+          )
+        )
+      ))
+      result.right.get(1) must beEqualTo(obj(
+        "persons" -> arr(
+          obj(
+            "name" -> "Edd",
+            "age" -> 1337
+          ),
+          obj(
+            "name" -> "Odd",
+            "age" -> 31337
+          )
+        )
+      ))
     }
   }
 }

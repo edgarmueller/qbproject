@@ -25,7 +25,7 @@ class QBCSVValidator(override val pathBuilders: Map[String, CSVRow => JsValue], 
   }
 
   private class CSVValidateRowUtil(schema: QBClass)(
-    factory: CSVRow => JsResult[JsValue], joinKeys: Set[ReverseSplitKey] = Set.empty) extends CSVAdaptRowUtil(factory) {
+    factory: CSVRow => JsResult[JsValue], joinKeys: Set[ReverseSplitKey] = Set.empty) extends CSVAdaptRowUtil(factory, joinKeys) {
 
     override def useParsedResult(jsResult: JsResult[JsValue], csvDiagnosis: CSVDiagnosis) = jsResult.flatMap[JsValue] {
       QBValidator.validateJsValue(schema)(_) match {
