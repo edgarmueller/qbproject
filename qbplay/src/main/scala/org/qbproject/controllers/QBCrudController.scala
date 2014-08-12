@@ -57,7 +57,7 @@ trait QBCrudController extends QBAPIController { self =>
   def afterCreate(jsObject: JsObject): JsObject = jsObject
 
   def create = JsonHeaders {
-    ValidatingAction(createSchema, beforeCreate).async { request =>
+    ValidatingAction(createSchema, beforeValidate = beforeCreate).async { request =>
       collection.create(request.validatedJson.asInstanceOf[JsObject]).map {
         result =>
           Ok(Json.toJson(afterCreate(result)))
@@ -69,7 +69,7 @@ trait QBCrudController extends QBAPIController { self =>
   def afterUpdate(jsObject: JsObject): JsObject = jsObject
 
   def update(id: String) = JsonHeaders {
-    ValidatingAction(updateSchema, beforeUpdate).async { request =>
+    ValidatingAction(updateSchema, beforeValidate = beforeUpdate).async { request =>
       collection.update(id, request.validatedJson.asInstanceOf[JsObject]).map {
         result =>
           Ok(Json.toJson(afterUpdate(result)))
