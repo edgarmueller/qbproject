@@ -28,11 +28,14 @@ package object csv {
     def <->(s2: SplitJoinKeyHelper) = ReverseSplitKey(joinKey, s2.key)
   }
 
+  // TODO: make token configurable
+  val SPLIT_TOKEN = '$'
+
   implicit class MappedPathStringExtensions(str: String) {
     // TODO: extract constant
-    def maps(otherString: String): String = str + "$" + otherString
-    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) = if (str.contains("$")) {
-      val splitted = str.split('$').toList
+    def maps(otherString: String): String = str + SPLIT_TOKEN + otherString
+    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) = if (str.contains(SPLIT_TOKEN)) {
+      val splitted = str.split(SPLIT_TOKEN).toList
       MappedPath(splitted.head, splitted.last) -> pf
     } else {
       Path(str) -> pf
@@ -101,10 +104,7 @@ package object csv {
 
   object QBCSVErrorMap {
 
-//    def apply(errors: Map[ResourceId, Seq[QBCSVError]]): QBCSVErrorMap =
-//      new QBCSVErrorMap(errors)
-
-    def bla(error: JsError): List[QBCSVDataError] = {
+    def convertToCSVDataErrors(error: JsError): List[QBCSVDataError] = {
       error.errors.toList.flatMap(pathWithErrors =>
         pathWithErrors._2.flatMap(error =>
           error.args.toList.collect {
@@ -124,8 +124,7 @@ package object csv {
     def apply(error: JsError): QBCSVErrorMap = {
       val errorMap = error.errors.foldLeft(Map[String, List[QBCSVError]]())((errorMap, pathWithErrors) =>
         pathWithErrors._2.foldLeft(errorMap)((map, error) =>
-          error.args.toList.foldLeft(map)((map, e) =>
-            e match { // TODO: use collect
+          error.args.toList.foldLeft(map)((map, err) => err match {
               case csvError: CSVErrorInfo =>
                 val currentErrors = errorMap.getOrElse(csvError.resource, List[QBCSVDataError]())
                 map.updated(csvError.resource, currentErrors :+ QBCSVDataError(error.message, csvError.resource, csvError.csvRow, csvError.header))
@@ -134,11 +133,8 @@ package object csv {
           )
         )
       )
-//      if (errorMap.isEmpty) {
-//        QBCSVJoinError("TODO", error.errors.head._2.head.message)
-//      } else {
-        new QBCSVErrorMap(errorMap)
-//      }
+
+      new QBCSVErrorMap(errorMap)
     }
   }
 
