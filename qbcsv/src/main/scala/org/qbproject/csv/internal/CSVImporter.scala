@@ -279,12 +279,21 @@ object CSVImporter {
       override val pathBuilders = toPathBuilders(pathConstructors)
     }
 
-   def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, CSVRow => JsValue] = {
+  def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, (CSVRow, String) => JsValue] = {
     pathBuilderSpecs.map { pathBuilderSpec =>
-      pathBuilderSpec._1.schemaPath -> {
-        row: CSVRow =>
-          pathBuilderSpec._2(CSVColumnUtil.getColumnData(pathBuilderSpec._1.csvPath)(row))
+      val builder = {
+        (row: CSVRow, path: String) =>
+          row.getColumnData(pathBuilderSpec._1.csvPath) match {
+            case Some(data) => pathBuilderSpec._2(data)
+            case None => row.getColumnData(path) match {
+              case Some(data) => pathBuilderSpec._2(data)
+              case None => CSVColumnUtil.getColumnData(path)(row); JsUndefined("Can't find the Path.") // this will throw an appropriate Exception.
+            }
+          }
       }
+      (pathBuilderSpec._1.schemaPath, builder)
     }.toMap
+
+
   }
 }
