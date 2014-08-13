@@ -341,7 +341,6 @@ object CSVImporterSpec extends Specification {
           "products" -> resource("products.csv", "id" <-> "id".splitKey)
         )(resourceSet)
 
-      println("> " + result.left.get)
       result must beLeft
     }
 

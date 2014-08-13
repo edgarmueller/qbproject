@@ -254,7 +254,7 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
       val contents = internalParse(qbType, resource)(secondarySplitKeys.toSet)
       sequenceJsResults(contents) match {
         case err: JsError =>
-          val x = QBCSVErrorMap.bla(err)
+          val x = QBCSVErrorMap.convertToCSVDataErrors(err)
           Failure(NonEmptyList(x.head, x.tail:_*))
         case JsSuccess(value, _) => value.successNel
       }
