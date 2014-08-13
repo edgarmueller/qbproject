@@ -57,7 +57,7 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
   }
 
   override def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
-    val csvHeader = path.toString().substring(1).replace("/", ".")
+    val csvHeader = resolvePath(path)
     row.headers.find(_.contains(csvHeader))
       .map(matchedHeader => row.headers.indexOf(matchedHeader))
       .fold[JsResult[JsValue]] {
@@ -81,7 +81,6 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
       } yield {
         group
       }).flatten
-      println(matchedValues)
 
       val childElements = (0 until matchedValues.size / div).map {
         idx => convert(qbType, path(idx), Seq.empty)

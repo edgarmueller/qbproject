@@ -47,16 +47,20 @@ object CSVColumnUtil {
   case class CSVException(rowNr: Int, e: Throwable) extends RuntimeException
 
   case class CSVRow(row: List[String], headers: List[String], resourceIdentifier: String = "", rowNr: Int = -1) {
-    def getColumnData(colName: String): String = {
+    def getColumnData(colName: String): Option[String] = {
       val index = headers.indexOf(colName)
       if (index == -1) {
-        throw new RuntimeException("column: " + colName + " not found.") // in " + headers)
+        None
+      } else {
+        Some(row(index).trim)
       }
-      row(index).trim
     }
   }
 
-  def getColumnData(colName: String)(implicit row: CSVRow): String = row.getColumnData(colName)
+  def getColumnData(colName: String)(implicit row: CSVRow): String = row.getColumnData(colName) match {
+    case Some(data) => data
+    case None => throw new RuntimeException("column: " + colName + " not found.") // in " + headers)
+  }
 
   def getColumnRange(headers: List[String])(implicit row: CSVRow): List[String] = {
     val indices = headers.map(h => row.headers.indexOf(h))

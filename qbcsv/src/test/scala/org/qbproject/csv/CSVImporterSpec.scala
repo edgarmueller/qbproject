@@ -168,6 +168,7 @@ object CSVImporterSpec extends Specification {
           "employees" -> resource("employees.csv", "employees".splitKey <-> "eId")
         )(resourceSet)
 
+      jsResults must beRight
       jsResults.right.get(0) must beEqualTo(Json.obj(
         "id" -> 1.0,
         "company" -> Json.obj(
@@ -588,6 +589,56 @@ object CSVImporterSpec extends Specification {
           obj(
             "name" -> "Odd",
             "age" -> 31337
+          )
+        )
+      ))
+    }
+
+    "allow path constructors to bind to arrays" in {
+
+      val csv =
+        """persons[0].name; persons[0].age; persons[1].name; persons[1].age
+          |foo; 12|34;    ;
+          |Edd; 13|37; Odd; 31|337""".stripMargin
+
+      val arrayItem = qbClass(
+        "name" -> qbString,
+        "age" -> qbList(qbString)
+      )
+
+      val schema = qbClass(
+        "persons" -> qbList(arrayItem)
+      )
+
+      val importer = CSVImporter(
+        "persons[].age" --> {
+          case x: String =>
+            x.split("\\|").map(JsString).foldLeft(JsArray()){
+              (array, number) =>
+                array.append(number)
+            }
+        })
+
+      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+
+      result must beRight
+      result.right.get(0) must beEqualTo(obj(
+        "persons" -> arr(
+          obj(
+            "name" -> "foo",
+            "age" -> arr("12", "34")
+          )
+        )
+      ))
+      result.right.get(1) must beEqualTo(obj(
+        "persons" -> arr(
+          obj(
+            "name" -> "Edd",
+            "age" -> arr("13", "37")
+          ),
+          obj(
+            "name" -> "Odd",
+            "age" -> arr("31", "337")
           )
         )
       ))

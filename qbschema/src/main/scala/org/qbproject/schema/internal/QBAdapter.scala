@@ -5,22 +5,30 @@ import play.api.libs.json._
 
 trait QBAdapter[I] {
 
-  type PathBuilder = I => JsValue
+  type PathBuilder = (I, String) => JsValue
 
   def adapt(schema: QBClass)(root: I): JsResult[JsValue] = atObject(schema, JsPath(), Seq.empty)(root)
 
   def pathBuilders: Map[String, PathBuilder] = Map.empty
 
   def convert(qbType: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
-    pathBuilders.get(resolvePath(path)).fold {
-      qbType match {
-        case arr: QBArray => atArray(arr, path, annotations)
-        case obj: QBClass => atObject(obj, path, annotations)
-        case schema: QBPrimitiveType[_] => atPrimitive(schema, path, annotations)
-      }
-    } {
-      builder => JsSuccess(builder(root))
+    (pathBuilders.get(createComparablePath(path)), qbType) match {
+      case (Some(builder), _) => JsSuccess(builder(root, resolvePath(path)))
+      case (None, arr: QBArray) => atArray(arr, path, annotations)
+      case (None, obj: QBClass) => atObject(obj, path, annotations)
+      case (None, schema: QBPrimitiveType[_]) => atPrimitive(schema, path, annotations)
+      case (None, _) => throw new RuntimeException("This should not happen!")
     }
+  }
+
+  def createComparablePath(path: JsPath): String = {
+    path.path.foldLeft("")((pathString, node) => {
+      node match {
+        case k: KeyPathNode => if (pathString == "") k.key else pathString + "." + k.key
+        case idx: IdxPathNode => s"$pathString[]"
+        case _ => ""
+      }
+    })
   }
 
   def atObject[A](schema: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
