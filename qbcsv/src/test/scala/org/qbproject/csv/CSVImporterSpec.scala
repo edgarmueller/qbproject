@@ -146,6 +146,40 @@ object CSVImporterSpec extends Specification {
       ))
     }
 
+    "perform One To One joins" in {
+
+      val root =
+        """id
+          |1
+          |2""".stripMargin
+
+      val companyData = """id;name;openHours
+            1;Dude GmbH;14-18
+            2;Nerd Inc.;22-24""".stripMargin
+
+
+      val rootResource = QBResource("root.csv", mkInputStream(root))
+      val companyResource = QBResource("companies.csv", mkInputStream(companyData))
+      val resourceSet = QBResourceSet(rootResource, companyResource)
+
+      val companies = CSVImporter().parse(
+        "root.csv",
+        Schemas.basic.companySchema.keep("id", "company"))(
+        "company" -> resource("companies.csv", "id")
+      )(resourceSet)
+
+      companies must beRight
+
+      val firstCompany = companies.right.get(0)
+      firstCompany must beEqualTo(Json.obj(
+        "id" -> 1,
+        "company" -> Json.obj(
+          "name" -> "Dude GmbH",
+          "openHours" -> "14-18"
+        )
+      ))
+    }
+
     "allow joins on multi attributes" in {
       val rangeRegex = "([0-9]+)\\s*-\\s*([0-9]+)".r
 
