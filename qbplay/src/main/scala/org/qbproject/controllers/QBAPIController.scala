@@ -9,13 +9,11 @@ import org.qbproject.schema.{ QBType, QBValidator }
 
 trait QBAPIController extends Controller {
 
-  def ValidatingAction(schema: QBType): ActionBuilder[ValidatedJsonRequest] = ValidatingAction(schema, identity)
-
-  def ValidatingAction(schema: QBType, beforeValidate: JsValue => JsValue) = new ActionBuilder[ValidatedJsonRequest] {
+  def ValidatingAction(schema: QBType, validator: QBValidator = QBValidator, beforeValidate: JsValue => JsValue = identity) = new ActionBuilder[ValidatedJsonRequest] {
     def invokeBlock[A](request: Request[A], block: (ValidatedJsonRequest[A]) => Future[SimpleResult]) = {
       extractJsonFromRequest(request).fold(noJsonResponse)(json => {
         val updatedJson = beforeValidate(json)
-        QBValidator.validateJsValue(schema)(updatedJson) match {
+        validator.validateJsValue(schema)(updatedJson) match {
           case JsSuccess(validatedJson, path) => block(new ValidatedJsonRequest(validatedJson, schema, request))
           case error: JsError => jsonInvalidResponse(error)
         }

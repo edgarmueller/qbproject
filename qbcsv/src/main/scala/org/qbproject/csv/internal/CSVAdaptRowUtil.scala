@@ -11,8 +11,7 @@ import play.api.libs.json.{JsError, JsResult}
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Try}
 
-class CSVAdaptRowUtil[A <: Any](
-  factory: CSVRow => JsResult[A], joinKeys: Set[ReverseSplitKey] = Set.empty) extends CSVColumnUtil(factory) {
+class CSVAdaptRowUtil[A <: Any](factory: CSVRow => JsResult[A], joinKeys: Set[ReverseSplitKey] = Set.empty) extends CSVColumnUtil(factory) {
 
   def parse(resource: QBResource, csvChars: (Char, Char)): List[JsResult[A]] = {
     val reader = new CSVReader(new InputStreamReader(resource.inputStream, "utf-8"), csvChars._1, csvChars._2)
