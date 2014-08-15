@@ -38,6 +38,8 @@ trait QBClass extends QBType with QBBaseType with CompositeRule[JsObject] {
    */
   def attributes: Seq[QBAttribute]
 
+  def apply(attributeName: String): Option[QBAttribute] = attributes.find(_.name == attributeName)
+
   override def toString = "object"
 }
 

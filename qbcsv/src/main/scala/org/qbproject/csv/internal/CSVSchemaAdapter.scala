@@ -1,5 +1,7 @@
 package org.qbproject.csv.internal
 
+import java.util.logging.{Level, Logger}
+
 import org.qbproject.csv.internal.CSVColumnUtil._
 import org.qbproject.schema._
 import org.qbproject.schema.internal.QBAdapter
@@ -7,52 +9,67 @@ import play.api.data.validation.ValidationError
 import play.api.libs.json._
 
 import scala.util.Try
-import scalaz.Validation.fromTryCatch
 
 trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
 
   override def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
-    fromTryCatch({
-      schema match {
-        case str: QBString =>
-          val str = asString(path)
-          if (str.length == 0 && schema.rules.exists(_.isInstanceOf[EnumRule])) {
-            // do not accept empty string if schema is an enum
-            JsUndefined("")
-          } else {
-            JsString(str)
-          }
-        case bool: QBBoolean => JsBoolean(asBoolean(path))
-        case int: QBInteger => JsNumber(asDouble(path))
-        case num: QBNumber => JsNumber(asDouble(path))
-      }
-    }).fold(throwable => {
-      handleAnnotations(schema, path, annotations)
-    }, JsSuccess(_))
+    row.getColumnData(resolvePath(path)) match {
+      case Some(data) =>
+        val v: Option[JsValue] = schema match {
+          case str: QBString if data.isEmpty && schema.rules.exists(_.isInstanceOf[EnumRule]) => None // do not accept empty string if schema is an enum
+          case str: QBString if data.isEmpty => None // we handle this case later
+          case str: QBString => Some(JsString(data))
+          case bool: QBBoolean => tryBoolean(data).map(JsBoolean)
+          case int: QBInteger => tryDouble(data).map(JsNumber(_))
+          case num: QBNumber => tryDouble(data).map(JsNumber(_))
+        }
+        v match {
+          case Some(jsValue) => JsSuccess(jsValue)
+          case None =>
+            if (data.isEmpty) {
+              annotations match {
+                case hasDefaultValue(default) => JsSuccess(default)
+                case isOptionalValue(Some(default)) => JsSuccess(default)
+                case isOptionalValue(None) => JsSuccess(JsUndefined(""))
+                case _ if schema.isInstanceOf[QBString] => JsSuccess(JsString(data))
+                case _ =>
+                  val msg = "Expected: " + schema + " at " + path + " got empty String"
+                  Logger.getLogger(getClass.getName).log(Level.SEVERE, msg)
+                  JsError(path -> ValidationError(msg, CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+              }
+            } else {
+              // data is not empty therefor there must be a problem with the data
+              val msg = "Expected: " + schema + " at " + path + " got \"" + data + "\""
+              Logger.getLogger(getClass.getName).log(Level.SEVERE, msg)
+              JsError(path -> ValidationError(msg, CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+            }
+        }
+      case None =>
+        annotations match {
+          case hasDefaultValue(default) => JsSuccess(default)
+          case isOptionalValue(Some(default)) => JsSuccess(default)
+          case isOptionalValue(None) => JsSuccess(JsUndefined(""))
+          case _ =>
+            val msg = "Expected: " + schema + " at " + path + " but the column is missing in the CSV."
+            Logger.getLogger(getClass.getName).log(Level.SEVERE, msg)
+            JsError(path -> ValidationError(msg, CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
+        }
+    }
   }
 
-  // check optionals and defaults
-  def handleAnnotations[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit row: CSVRow): JsResult[JsValue] = {
-    def handleDefault: JsResult[JsValue] = {
+  object hasDefaultValue {
+    def unapply(annotations: Seq[QBAnnotation]): Option[JsValue] = {
       annotations.collectFirst {
-        case default: QBDefaultAnnotation => default
-      }.fold[JsResult[JsValue]] {
-        JsError(path -> ValidationError("Expected: " + schema + " at " + path, CSVErrorInfo(row.resourceIdentifier, row.rowNr)))
-      } {
-        default => JsSuccess(default.value)
+        case default: QBDefaultAnnotation => default.value
       }
     }
-    annotations.collectFirst {
-      case optional: QBOptionalAnnotation =>
-        optional.fallBack
-    }.fold[JsResult[JsValue]] {
-      handleDefault
-    } { possibleFallBack =>
-      JsSuccess(possibleFallBack.fold[JsValue] {
-        JsUndefined("")
-      } {
-        identity
-      })
+  }
+
+  object isOptionalValue {
+    def unapply(annotations: Seq[QBAnnotation]): Option[Option[JsValue]] = {
+      annotations.collectFirst {
+        case optional: QBOptionalAnnotation => optional.fallBack
+      }
     }
   }
 
@@ -61,9 +78,7 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
     row.headers.find(_.contains(csvHeader))
       .map(matchedHeader => row.headers.indexOf(matchedHeader))
       .fold[JsResult[JsValue]] {
-      JsError(path ->
-        ValidationError("Could not find column " + csvHeader + ".",
-          CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
+      JsError(path -> ValidationError("Could not find column " + csvHeader + ".", CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
     } { startIndex =>
       val matchingHeaders = row.headers.drop(startIndex).takeWhile {
         _.startsWith(csvHeader)
