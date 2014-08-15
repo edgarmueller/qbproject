@@ -676,5 +676,58 @@ object CSVImporterSpec extends Specification {
         )
       ))
     }
+
+    "must ignore optional fields if they are not in the CSV" in {
+      val csv =
+        """id;name
+          |1;foo
+          |2;bar""".stripMargin
+
+      val schema = qbClass(
+        "id" -> qbString,
+        "name" -> qbString,
+        "tags" -> optional(qbList(qbString))
+      )
+
+      val result = CSVImporter().parse(schema, QBResource("resource", mkInputStream(csv)))
+
+      result must beRight
+      result.right.get(0) must beEqualTo(obj(
+        "id" -> "1",
+        "name" -> "foo"
+      ))
+      result.right.get(1) must beEqualTo(obj(
+        "id" -> "2",
+        "name" -> "bar"
+      ))
+    }
+
+    "must set fallback values of optional fields if they are not in the CSV" in {
+      val csv =
+        """id;name
+          |1;foo
+          |2;bar""".stripMargin
+
+      val schema = qbClass(
+        "id" -> qbString,
+        "name" -> qbString,
+        "tags" -> optional(qbList(qbString), JsArray())
+      )
+
+      val result = CSVImporter().parse(schema, QBResource("resource", mkInputStream(csv)))
+
+      result must beRight
+      result.right.get(0) must beEqualTo(obj(
+        "id" -> "1",
+        "name" -> "foo",
+        "tags" -> arr()
+      ))
+      result.right.get(1) must beEqualTo(obj(
+        "id" -> "2",
+        "name" -> "bar",
+        "tags" -> arr()
+      ))
+    }
+
   }
 }

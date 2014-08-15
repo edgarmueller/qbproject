@@ -78,7 +78,11 @@ trait CSVSchemaAdapter extends QBAdapter[CSVRow] {
     row.headers.find(_.contains(csvHeader))
       .map(matchedHeader => row.headers.indexOf(matchedHeader))
       .fold[JsResult[JsValue]] {
-      JsError(path -> ValidationError("Could not find column " + csvHeader + ".", CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
+      annotations match {
+        case isOptionalValue(Some(default)) => JsSuccess(default)
+        case isOptionalValue(None) => JsSuccess(JsUndefined(""))
+        case _ => JsError(path -> ValidationError("Could not find column " + csvHeader + ".", CSVErrorInfo(row.resourceIdentifier, row.rowNr + 2)))
+      }
     } { startIndex =>
       val matchingHeaders = row.headers.drop(startIndex).takeWhile {
         _.startsWith(csvHeader)
