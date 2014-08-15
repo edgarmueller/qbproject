@@ -4,10 +4,10 @@ import play.Project._
 import com.typesafe.sbteclipse.plugin.EclipsePlugin._
 import bintray.Plugin._
 import scoverage.ScoverageSbtPlugin
+import sbtrelease.ReleasePlugin
+import sbtrelease.ReleasePlugin._
 
 object QBBuild extends Build {
-
-  val QBVersion = "0.4.0-SNAPSHOT"
 
   val QBRepositories = Seq(
     "Typesafe repository"     at "http://repo.typesafe.com/typesafe/releases/",
@@ -17,12 +17,10 @@ object QBBuild extends Build {
   )
 
   val buildSettings = Project.defaultSettings ++
-    Seq(bintrayPublishSettings:_*) ++
     Seq(ScoverageSbtPlugin.instrumentSettings:_*) ++
     Seq(CoverallsPlugin.coverallsSettings:_*) ++
     Seq(
       organization := "org.qbproject",
-      version := QBVersion,
       scalaVersion := "2.10.4",
       licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
       EclipseKeys.projectFlavor := EclipseProjectFlavor.Scala,
@@ -30,20 +28,29 @@ object QBBuild extends Build {
       EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE16),
       EclipseKeys.withSource := true,
       Keys.fork in Test := false,
-      Keys.parallelExecution in Test := false,
-      bintray.Keys.bintrayOrganization in bintray.Keys.bintray := Some("qbproject")
+      Keys.parallelExecution in Test := false
     )
 
-  lazy val root = Project("qbroot", file("."),
-    settings =  buildSettings
-      ++ Seq(
+  val releaseSettings = ReleasePlugin.releaseSettings ++ bintrayPublishSettings ++ Seq(
+      ReleaseKeys.versionFile := file("project/version.sbt"),
+      publishMavenStyle := true,
+      publishTo := (publishTo in bintray.Keys.bintray).value, // set it globally so that sbt-release plugin does not freak out.
+      bintray.Keys.bintrayOrganization in bintray.Keys.bintray := Some("qbproject")
+  )
+
+  lazy val root = Project("qbroot", file("."))
+    .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
+    .settings(
       unmanagedSourceDirectories in Compile <+= baseDirectory(new File(_, "src/main/scala")),
       unmanagedSourceDirectories in Test    <+= baseDirectory(new File(_, "src/test/scala")),
       retrieveManaged := true
-    )).aggregate(schemaProject, playProject, csvProject)
+    )
+    .aggregate(schemaProject, playProject, csvProject)
 
   lazy val schemaProject = Project("qbschema", file("qbschema"))
     .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
@@ -57,6 +64,7 @@ object QBBuild extends Build {
 
   lazy val playProject = Project("qbplay", file("qbplay"))
     .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
@@ -73,6 +81,7 @@ object QBBuild extends Build {
 
   lazy val csvProject = Project("qbcsv", file("qbcsv"))
     .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
@@ -84,8 +93,9 @@ object QBBuild extends Build {
       )
     ).dependsOn(schemaProject)
 
-  lazy val playSampleProject = play.Project("qbplay-sample", QBVersion, path = file("qbplay-sample"))
+  lazy val playSampleProject = play.Project("qbplay-sample", "ignore", path = file("qbplay-sample"))
     .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
     .settings(playScalaSettings : _*)
     .settings(
       resolvers ++= QBRepositories,
