@@ -84,7 +84,7 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
         (updatedPrimarySchema, resources.head) :: secondarySchemaMappings,
         resourceMapping.reverseSplitKeys
       )
-      result <- fold(results.head.asInstanceOf[List[JsObject]], buildJoinData(resourceMapping, results))
+      result <- fold(results.head.asInstanceOf[List[JsObject]], schema, buildJoinData(resourceMapping, results))
     } yield {
       result
     }
@@ -185,7 +185,7 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
 
   }
 
-  private def fold(initData: List[JsObject], foreignData: List[JoinData]): Validation[NonEmptyList[QBCSVError], List[JsObject]] = {
+  private def fold(initData: List[JsObject], initDataSchema: QBClass, foreignData: List[JoinData]): Validation[NonEmptyList[QBCSVError], List[JsObject]] = {
     foreignData.foldLeft[Validation[NonEmptyList[QBCSVError], List[JsObject]]](Success(initData))((joinTargets, secondaryData) => {
       joinTargets.flatMap(targets => {
         val x: List[Validation[NonEmptyList[QBCSVError], JsObject]] = targets.map { joinTarget =>
@@ -198,7 +198,12 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
                 if (attributePath.size > 1) {
                   deepJoin(joinTarget, attributePath, data)
                 } else {
-                  joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data)).successNel
+                  initDataSchema(secondaryData.attributeName) match {
+                    case Some(attr) if attr.qbType.isInstanceOf[QBClass] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data.head)).successNel
+                    case Some(attr) if attr.qbType.isInstanceOf[QBArray] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data)).successNel
+                    case Some(attr) => QBCSVJoinError("TODO", "Could find ${secondaryData.keys.primaryKey} in Schema of Join Target but qbType ${attr.qbType} is not supported.").failNel
+                    case None => QBCSVJoinError("TODO", "Couldn't find ${secondaryData.keys.primaryKey} in Schema of Join Target").failNel
+                  }
                 }
             }
           } else {

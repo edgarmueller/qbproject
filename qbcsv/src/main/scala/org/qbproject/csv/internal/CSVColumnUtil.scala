@@ -1,6 +1,7 @@
 package org.qbproject.csv.internal
 
 import java.io.{InputStream, InputStreamReader}
+import java.util.logging.{Level, Logger}
 
 import au.com.bytecode.opencsv.CSVReader
 import org.joda.time.DateTime
@@ -98,16 +99,40 @@ object CSVColumnUtil {
     getColumnData(colName).toDouble
   }
 
+  def tryDouble(data: String): Option[Double] = {
+    try {
+      Some(data.toDouble)
+    } catch {
+      case ex: NumberFormatException => None
+    }
+  }
+
   def asDate(colName: String, pattern: String)(implicit row: CSVRow): DateTime = {
     DateTimeFormat.forPattern(pattern).parseDateTime(getColumnData(colName))
   }
 
   def asBoolean(colName: String)(implicit row: CSVRow): Boolean = asBoolean(colName, "true", "false")
   def asBoolean(colName: String, trueToken: String = "true", falseToken: String = "false")(implicit row: CSVRow): Boolean = {
-    getColumnData(colName) match {
+    convertToBoolean(getColumnData(colName))
+  }
+
+  def convertToBoolean(data: String, trueToken: String = "true", falseToken: String = "false"): Boolean = {
+    data match {
       case t if t == trueToken => true
       case f if f == falseToken => false
-      case _ => throw new RuntimeException(s"Invalid value in colName")
+      case f if f.isEmpty =>
+        val ex = new Exception(s"Invalid value: empty String for Boolean.")
+        Logger.getLogger(getClass.getName).log(Level.SEVERE, ex.getMessage, ex)
+        false
+      case _ => throw new RuntimeException(s"Invalid value: $data")
+    }
+  }
+
+  def tryBoolean(data: String, trueToken: String = "true", falseToken: String = "false"): Option[Boolean] = {
+    data match {
+      case t if t == trueToken => Some(true)
+      case f if f == falseToken => Some(false)
+      case _ => None
     }
   }
 

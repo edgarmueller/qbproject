@@ -82,8 +82,8 @@ class CSVColumnUtilSpec extends Specification {
         "tags" -> qbList(qbString),
         "gender" -> optional(qbString, JsString("m")))
       val testData = """id;name;email;age;tags[0];tags[1];gender
-        1;Eddy;eddy@qb.org;28;yolo;quake
-        2;Otto;otto@qb.org;26;ginger"""
+        1;Eddy;eddy@qb.org;28;yolo;quake;
+        2;Otto;otto@qb.org;26;ginger;"""
       val result = parse(testSchema, testData)
 
       result.size must beEqualTo(2)
@@ -108,8 +108,8 @@ class CSVColumnUtilSpec extends Specification {
         "gender" -> optional(qbString)
       )
       val testData = """id;name;email;age;tags[0];tags[1];gender
-        1;Eddy;eddy@qb.org;28;yolo;quake
-        2;Otto;otto@qb.org;26;ginger"""
+        1;Eddy;eddy@qb.org;28;yolo;quake;
+        2;Otto;otto@qb.org;26;ginger;"""
       val result = parse(testSchema, testData)
       result.size must beEqualTo(2)
       QBValidator.validateJsValue(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
@@ -131,8 +131,8 @@ class CSVColumnUtilSpec extends Specification {
         "gender" -> optional(qbEnum("foo", "bar", "quux"), JsString("bar"))
       )
       val testData = """id;name;email;age;tags[0];tags[1];gender
-        1;Eddy;eddy@qb.org;28;yolo;quake
-        2;Otto;otto@qb.org;26;ginger"""
+        1;Eddy;eddy@qb.org;28;yolo;quake;
+        2;Otto;otto@qb.org;26;ginger;"""
       val result = parse(testSchema, testData)
       result.size must beEqualTo(2)
       QBValidator.validateJsValue(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
