@@ -77,6 +77,8 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
 
     val updatedPrimarySchema = keepSplitKeys(schema, resourceMapping)
 
+    import Validation._
+
     val validationResult = for {
       resources <- (fetchPrimaryResource |@| fetchSecondaryResources){ _ :: _ }
       secondarySchemaMappings <- buildSecondarySchemaMappings(schema, resourceMapping, resources.tail)
@@ -186,6 +188,7 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
   }
 
   private def fold(initData: List[JsObject], initDataSchema: QBClass, foreignData: List[JoinData]): Validation[NonEmptyList[QBCSVError], List[JsObject]] = {
+    import Validation._
     foreignData.foldLeft[Validation[NonEmptyList[QBCSVError], List[JsObject]]](Success(initData))((joinTargets, secondaryData) => {
       joinTargets.flatMap(targets => {
         val x: List[Validation[NonEmptyList[QBCSVError], JsObject]] = targets.map { joinTarget =>
