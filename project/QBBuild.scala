@@ -57,7 +57,8 @@ object QBBuild extends Build {
         "com.typesafe.play" %% "play-json"         % "2.2.3",
         "com.mandubian"     %% "play-json-zipper"  % "1.1",
         "org.specs2"        %% "specs2"            % "2.3.7"  % "test",
-        "org.scalaz"        %% "scalaz-core"       % "7.0.5"
+        "org.scalaz"        %% "scalaz-core"       % "7.0.5",
+        "com.github.axel22" %% "scalameter"        % "0.4"      % "test"
       )
     )
 
