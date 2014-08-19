@@ -59,7 +59,8 @@ object QBBuild extends Build {
         "org.specs2"        %% "specs2"            % "2.3.7"  % "test",
         "org.scalaz"        %% "scalaz-core"       % "7.0.5",
         "com.github.axel22" %% "scalameter"        % "0.4"      % "test"
-      )
+      ),
+      testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     )
 
   lazy val playProject = Project("qbplay", file("qbplay"))
