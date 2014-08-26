@@ -31,6 +31,7 @@ trait JSONSchemaWrites {
     case EnumRule(values) => List("enum" -> JsArray(values.map(JsString)))
     case f: FormatRule[_] => List("format" -> JsString(f.format))
     case c: CompositeRule[_] => c.rules.toList.flatMap(writeRule(_))
+    case kv: KeyValueRule[_] => List(kv.key -> kv.value)
   }
 
   implicit def qbTypeWriter: Writes[QBType] = OWrites[QBType] {

@@ -231,6 +231,11 @@ case class MaxPropertiesRule(maxProperties: Int) extends ValidationRule[JsObject
   val errorMessage = "qb.max.props.violated"
 }
 
+case class KeyValueRule[A](key: String, value: String) extends ValidationRule[A] {
+  val errorMessage = "qb.format.always.valid"
+
+  override def isValid(a: A): Boolean = true
+}
 
 //----------------------------------------------------------
 // 	Format Rules
