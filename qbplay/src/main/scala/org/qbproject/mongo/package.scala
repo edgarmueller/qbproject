@@ -12,6 +12,8 @@ package object mongo {
 
   def objectId = new QBObjectId(Set(new ObjectIdRule))
 
+  def objectId(endpoint: String) = new QBObjectId(Set(new ObjectIdRule, new KeyValueRule("endpoint", endpoint)))
+
   class ObjectIdRule extends FormatRule[JsString] {
     val format = "objectId"
 

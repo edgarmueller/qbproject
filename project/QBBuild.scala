@@ -34,7 +34,6 @@ object QBBuild extends Build {
     )
 
   val releaseSettings = ReleasePlugin.releaseSettings ++ bintrayPublishSettings ++ Seq(
-      ReleaseKeys.versionFile := file("project/version.sbt"),
       publishMavenStyle := true,
       publishTo := (publishTo in bintray.Keys.bintray).value, // set it globally so that sbt-release plugin does not freak out.
       bintray.Keys.bintrayOrganization in bintray.Keys.bintray := Some("qbproject")
