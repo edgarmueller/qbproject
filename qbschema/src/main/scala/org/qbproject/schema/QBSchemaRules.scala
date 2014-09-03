@@ -1,5 +1,8 @@
 package org.qbproject.schema
 
+import java.util.regex.Pattern
+
+import scala.collection.immutable.HashSet
 import scala.util.Try
 import scalaz.{Success, Failure, Validation}
 import org.joda.time.DateTime
@@ -17,22 +20,8 @@ import play.api.data.validation.ValidationError
  */
 trait ValidationRule[TO_VALIDATE] {
 
-  /**
-   * Checks whether the given object is valid.
-   *
-   * @param a
-   *          the object to be validated
-   * @return true, if the object is valid, false otherwise
-   */
-  def isValid(a: TO_VALIDATE): Boolean
-
-  /**
-   * The error message in case validation fails.
-   *
-   * @return the error message
-   */
-  def errorMessage: String
-
+  type ERRORS = List[ValidationError]
+  
   /**
    * Validates the given object and returns the validation status
    *
@@ -41,13 +30,7 @@ trait ValidationRule[TO_VALIDATE] {
    * @return
    *         a validation result that may succeed or fail
    */
-  def validate(a: TO_VALIDATE): Validation[ValidationError, TO_VALIDATE] = {
-    if (isValid(a)) {
-      Success(a)
-    } else {
-      Failure(ValidationError(errorMessage))
-    }
-  }
+  def validate(a: TO_VALIDATE): Validation[ERRORS, TO_VALIDATE]
 }
 
 /**
@@ -66,21 +49,23 @@ trait CompositeRule[A <: JsValue] extends ValidationRule[A] {
   def rules: Set[ValidationRule[A]]
 
   /**
-   * Checks whether the given object is valid by checking if all rules are valid.
+   * Validates the given object and returns the validation status
    *
    * @param a
-   *          the object to be validated
-   * @return true, if the object is valid, false otherwise
+             the object to be validated
+              * @return
+   * a validation result that may succeed or fail
    */
-  override def isValid(a: A) = rules.forall(_.isValid(a))
-
-  /**
-   * @inheritdoc
-   *
-   * @return the error message
-   */
-  override def errorMessage =
-    rules.foldLeft("")((msg,rule) => { /*println(msg + "/" + rule.errorMessage);*/ msg + rule.errorMessage })
+  override def validate(a: A): Validation[ERRORS, A] = {
+    rules.foldLeft[Validation[ERRORS, A]](Success(a)) {
+      (acc, rule) => (acc, rule.validate(a)) match {
+        case (Success(s1), Success(s2)) => Success(s1)
+        case (Success(s1), Failure(f2)) => Failure(f2)
+        case (Failure(f1), Success(s2)) => Failure(f1)
+        case (Failure(e1: ERRORS), Failure(e2: ERRORS)) => Failure(e1 ::: e2)
+      }
+    }
+  }
 }
 
 //----------------------------------------------------------
@@ -94,8 +79,13 @@ trait CompositeRule[A <: JsValue] extends ValidationRule[A] {
  *           a factor of the number to be validated, if this rule should validate successfully
  */
 case class MultipleOfRule(multiple: Double) extends ValidationRule[JsNumber] {
-  def isValid(number: JsNumber) = number.value.toDouble % multiple == 0
-  val errorMessage = "qb.number.multipleof.violated"
+  override def validate(number: JsNumber): Validation[ERRORS, JsNumber] = {
+    if(number.value.toDouble % multiple == 0) {
+      Success(number)
+    } else {
+      Failure(List(ValidationError("qb.number.multipleof.violated")))
+    }
+  }
 }
 
 /**
@@ -107,6 +97,13 @@ case class MultipleOfRule(multiple: Double) extends ValidationRule[JsNumber] {
  *            if true, the check also succeeds if the number to be checked is equal to the minimum
  */
 case class MinRule(min: Double, isExclusive: Boolean) extends ValidationRule[JsNumber] {
+  override def validate(number: JsNumber): Validation[ERRORS, JsNumber] = {
+    if(isValid(number)) {
+      Success(number)
+    } else {
+      Failure(List(ValidationError("qb.number.min.rule.violated")))
+    }
+  }
   def isValid(n: JsNumber) = {
     if (isExclusive) {
       n.value.toDouble > min
@@ -114,7 +111,6 @@ case class MinRule(min: Double, isExclusive: Boolean) extends ValidationRule[JsN
       n.value.toDouble >= min
     }
   }
-  val errorMessage = "qb.number.min.rule.violated"
 }
 
 /**
@@ -126,6 +122,13 @@ case class MinRule(min: Double, isExclusive: Boolean) extends ValidationRule[JsN
  *            if true, the check also succeeds if the number to be checked is equal to the maximum
  */
 case class MaxRule(max: Double, isExclusive: Boolean) extends ValidationRule[JsNumber] {
+  override def validate(number: JsNumber): Validation[ERRORS, JsNumber] = {
+    if(isValid(number)) {
+      Success(number)
+    } else {
+      Failure(List(ValidationError("qb.number.max.rule.violated")))
+    }
+  }
   def isValid(n: JsNumber) = {
     if (isExclusive) {
       n.value.toDouble < max
@@ -133,7 +136,6 @@ case class MaxRule(max: Double, isExclusive: Boolean) extends ValidationRule[JsN
       n.value.toDouble <= max
     }
   }
-  val errorMessage = "qb.number.max.rule.violated"
 }
 
 /**
@@ -155,8 +157,13 @@ case class DoubleRuleWrapper(rule: ValidationRule[JsNumber])
  *           the minimum length of the string
  */
 case class MinLengthRule(minLength: Int) extends ValidationRule[JsString] {
-  def isValid(str: JsString) = str.value.length >= minLength
-  val errorMessage = "qb.string.min.length.violated"
+  override def validate(str: JsString): Validation[ERRORS, JsString] = {
+    if(str.value.length >= minLength) {
+      Success(str)
+    } else {
+      Failure(List(ValidationError("qb.string.min.length.violated")))
+    }
+  }
 }
 
 /**
@@ -166,19 +173,35 @@ case class MinLengthRule(minLength: Int) extends ValidationRule[JsString] {
  *           the maximum length of the string that must not be exceeded
  */
 case class MaxLengthRule(maxLength: Int) extends ValidationRule[JsString] {
-  def isValid(str: JsString) = str.value.length < maxLength
-  val errorMessage = "qb.string.max.length.violated"
+  override def validate(str: JsString): Validation[ERRORS, JsString] = {
+    if(str.value.length < maxLength) {
+      Success(str)
+    } else {
+      Failure(List(ValidationError("qb.string.max.length.violated")))
+    }
+  }
 }
 
 /**
  * Rule that checks whether a string matches regular expression.
  *
- * @param regex
+ * @param pattern
  *           the regular expression to be matched
  */
-case class RegexRule(regex: String) extends ValidationRule[JsString] {
-  def isValid(str: JsString) = str.value.matches(regex)
-  val errorMessage = "qb.string.regex.violated"
+case class RegexRule(pattern: Pattern) extends ValidationRule[JsString] {
+  override def validate(str: JsString): Validation[ERRORS, JsString] = {
+    if(pattern.matcher(str.value).matches()) {
+      Success(str)
+    } else {
+      Failure(List(ValidationError(errorMessage(str.value))))
+    }
+  }
+
+  def errorMessage(input: String) = s"'$input' doesn't comply with RegEx '${pattern.pattern()}'"
+}
+
+object RegexRule {
+  def apply(regex: String) = new RegexRule(Pattern.compile(regex))
 }
 
 /**
@@ -188,8 +211,14 @@ case class RegexRule(regex: String) extends ValidationRule[JsString] {
  *           the valid strings
  */
 case class EnumRule(enum: List[String]) extends ValidationRule[JsString] {
-  def isValid(str: JsString) = enum.contains(str.value)
-  val errorMessage = "qb.string.enum.violated"
+  val values = HashSet(enum:_ *)
+  override def validate(str: JsString): Validation[ERRORS, JsString] = {
+    if(values.contains(str.value)) {
+      Success(str)
+    } else {
+      Failure(List(ValidationError("'" + str.value + "' is not one of " + enum.mkString(", "))))
+    }
+  }
 }
 
 //----------------------------------------------------------
@@ -200,8 +229,13 @@ case class EnumRule(enum: List[String]) extends ValidationRule[JsString] {
  * Rule that checks whether all items of an array are unique.
  */
 case class UniquenessRule() extends ValidationRule[JsArray] {
-  def isValid(arr: JsArray) = arr.value.distinct.size == arr.value.size
-  val errorMessage = "qb.arr.uniqueness.violated"
+  override def validate(arr: JsArray): Validation[ERRORS, JsArray] = {
+    if(arr.value.distinct.size == arr.value.size) {
+      Success(arr)
+    } else {
+      Failure(List(ValidationError("qb.arr.uniqueness.violated")))
+    }
+  }
 }
 
 //----------------------------------------------------------
@@ -215,8 +249,13 @@ case class UniquenessRule() extends ValidationRule[JsArray] {
  *            the minimum number of properties
  */
 case class MinPropertiesRule(minProperties: Int) extends ValidationRule[JsObject] {
-  def isValid(obj: JsObject) = obj.fieldSet.size >= minProperties
-  val errorMessage = "qb.min.props.violated"
+  override def validate(obj: JsObject): Validation[ERRORS, JsObject] = {
+    if(obj.fieldSet.size >= minProperties) {
+      Success(obj)
+    } else {
+      Failure(List(ValidationError("qb.min.props.violated")))
+    }
+  }
 }
 
 /**
@@ -227,14 +266,17 @@ case class MinPropertiesRule(minProperties: Int) extends ValidationRule[JsObject
  *            the minimum number of properties
  */
 case class MaxPropertiesRule(maxProperties: Int) extends ValidationRule[JsObject] {
-  def isValid(obj: JsObject) = obj.fieldSet.size <= maxProperties
-  val errorMessage = "qb.max.props.violated"
+  override def validate(obj: JsObject): Validation[ERRORS, JsObject] = {
+    if(obj.fieldSet.size <= maxProperties) {
+      Success(obj)
+    } else {
+      Failure(List(ValidationError("qb.max.props.violated")))
+    }
+  }
 }
 
 case class KeyValueRule[A](key: String, value: String) extends ValidationRule[A] {
-  val errorMessage = "qb.format.always.valid"
-
-  override def isValid(a: A): Boolean = true
+  override def validate(a: A): Validation[ERRORS, A] = Success(a)
 }
 
 //----------------------------------------------------------
@@ -248,7 +290,6 @@ case class KeyValueRule[A](key: String, value: String) extends ValidationRule[A]
  */
 trait FormatRule[A] extends ValidationRule[A] {
   def format: String
-  val errorMessage = "qb.format." + format
 }
 
 /**
@@ -257,7 +298,14 @@ trait FormatRule[A] extends ValidationRule[A] {
  */
 object DateTimeRule extends FormatRule[JsString] {
   val format = "date-time"
-  def isValid(str: JsString) = Try(new DateTime(str.value)).isSuccess
+
+  override def validate(str: JsString): Validation[ERRORS, JsString] = {
+    if(Try(new DateTime(str.value)).isSuccess) {
+      Success(str)
+    } else {
+      Failure(List(ValidationError("qb.format.date-time")))
+    }
+  }
 }
 
 /**
@@ -266,5 +314,12 @@ object DateTimeRule extends FormatRule[JsString] {
  */
 object PosixTimeRule extends FormatRule[JsNumber] {
   val format = "posix-time"
-  def isValid(d: JsNumber) = d.value.toDouble.isWhole && d.value.toDouble > 0
+
+  override def validate(d: JsNumber): Validation[ERRORS, JsNumber] = {
+    if(d.value.toDouble.isWhole && d.value.toDouble > 0) {
+      Success(d)
+    } else {
+      Failure(List(ValidationError("qb.format.posix-time")))
+    }
+  }
 }

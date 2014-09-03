@@ -9,7 +9,7 @@ import reactivemongo.bson.BSONObjectID
 
 import org.joda.time.DateTime
 
-object MongoTransformerSpec extends Specification {
+class MongoTransformerSpec extends Specification {
 
   "MongoTransformer" should {
 

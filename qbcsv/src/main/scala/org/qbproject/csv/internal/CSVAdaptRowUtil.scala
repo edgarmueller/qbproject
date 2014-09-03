@@ -48,7 +48,7 @@ class CSVAdaptRowUtil[A <: Any](factory: CSVRow => JsResult[A], joinKeys: Set[Re
         // CSV parser throws exceptions
         if (rowResult.isFailure) {
           val error = rowResult.asInstanceOf[Failure[_]]
-          val errorMessage = "Error in row " + rowNr + " : " +
+            val errorMessage = "Error in row " + rowNr + " : " +
             error.exception.getMessage + "\n"
           JsError(ValidationError(errorMessage, CSVErrorInfo(resource.identifier, rowNr)))
         } else {

@@ -1,8 +1,11 @@
 package org.qbproject
 
 import org.qbproject.schema._
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+
+import scalaz.{Failure, Success, Validation}
 
 package object mongo {
 
@@ -10,15 +13,9 @@ package object mongo {
     override def toString = "objectId"
   }
 
-  def objectId = new QBObjectId(Set(new ObjectIdRule))
+  def objectId = new QBObjectId(Set(RegexRule("[0-9A-Fa-f]{24}")))
 
-  def objectId(endpoint: String) = new QBObjectId(Set(new ObjectIdRule, new KeyValueRule("endpoint", endpoint)))
-
-  class ObjectIdRule extends FormatRule[JsString] {
-    val format = "objectId"
-
-    def isValid(str: JsString): Boolean = BSONObjectID.parse(str.value).isSuccess
-  }
+  def objectId(endpoint: String) = new QBObjectId(Set(RegexRule("[0-9A-F]{24}"), new KeyValueRule("endpoint", endpoint)))
 
   def read(schema: QBClass)(instance: JsObject): JsResult[JsObject] = {
     new MongoTransformer(schema).fromMongoJson(instance)

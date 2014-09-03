@@ -14,7 +14,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject
 
-object QBValueUpdateSpec extends Specification {
+class QBValueUpdateSpec extends Specification {
 
   "Mapping over types" should {
 

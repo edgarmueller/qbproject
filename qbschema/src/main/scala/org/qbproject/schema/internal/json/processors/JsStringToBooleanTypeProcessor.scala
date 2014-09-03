@@ -4,6 +4,7 @@ import org.qbproject.schema.internal.visitor.TypeProcessor
 import org.qbproject.schema.internal.visitor.QBPath
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
+import scalaz.{Failure, Success}
 import scalaz.Validation.fromTryCatch
 import org.qbproject.schema.{QBBoolean, QBType}
 
@@ -21,9 +22,9 @@ class JsStringToBooleanTypeProcessor extends TypeProcessor {
       case b: JsBoolean => JsSuccess(b)
       case s: JsString =>
         fromTryCatch(s.value.toBoolean)
-          .leftMap(t => ValidationError("qb.invalid.boolean.format" + ": " + t.getMessage))
+          .leftMap(t => List(ValidationError("qb.invalid.boolean.format: " + t.getMessage)))
           .flatMap(bool => qbType.validate(JsBoolean(bool)))
-          .fold(JsError(path.toJsPath, _), JsSuccess(_))
+          .fold(errors => JsError(Seq(path.toJsPath -> errors)), JsSuccess(_))
       case _ => JsError("qb.error.tolerant.boolean")
     }
   }

@@ -27,7 +27,7 @@ trait JSONSchemaWrites {
     case MinRule(min, isExclusive) => List(ExclusiveMinimum -> isExclusive, MinimumId -> JsNumber(min))
     case MaxRule(max, isExclusive) => List(ExclusiveMaximum -> isExclusive, MaximumId -> JsNumber(max))
     case MultipleOfRule(num) => List(MultipleOf -> num)
-    case RegexRule(pat) => List(PatternId -> JsString(pat))
+    case RegexRule(pat) => List(PatternId -> JsString(pat.pattern()))
     case EnumRule(values) => List("enum" -> JsArray(values.map(JsString)))
     case f: FormatRule[_] => List("format" -> JsString(f.format))
     case c: CompositeRule[_] => c.rules.toList.flatMap(writeRule(_))

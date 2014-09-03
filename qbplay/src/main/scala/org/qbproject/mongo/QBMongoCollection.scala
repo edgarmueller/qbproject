@@ -19,7 +19,7 @@ class QBMongoCollection(collectionName: String)(db: DB) {
 
   type ID = String
 
-  private lazy val collection = db.collection[JSONCollection](collectionName)
+  private lazy val collection: JSONCollection = db.collection[JSONCollection](collectionName)
   
   /** Perform a raw command on the underlying mongocollection */
   def rawCollection = collection

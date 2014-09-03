@@ -1,5 +1,7 @@
 package org.qbproject.schema
 
+import java.util.regex.Pattern
+
 import play.api.libs.json._
 import scala.Some
 
@@ -60,8 +62,8 @@ trait QBSchemaDSL {
 
   def qbEnum(values: String*) = qbString(new EnumRule(values.toList))
 
-  def pattern(regex: String, errMessage: String = "qb.invalid.pattern") = new RegexRule(regex) {
-    override val errorMessage = errMessage
+  def pattern(regex: String, errMessage: String = "qb.invalid.pattern") = new RegexRule(Pattern.compile(regex)) {
+    override def errorMessage(input: String) = errMessage
   }
 
   def qbEmail = qbString(pattern("""\b[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\b""", "q.invalid.email"))

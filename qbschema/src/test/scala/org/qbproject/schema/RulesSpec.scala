@@ -12,30 +12,30 @@ class RulesSpec extends Specification {
   "String Rules" should {
 
     "nonEmpty" in {
-      qbNonEmptyText.isValid(JsString("a")) must beTrue
-      qbNonEmptyText.isValid(JsString("")) must beFalse
+      qbNonEmptyText.validate(JsString("a")).isSuccess must beTrue
+      qbNonEmptyText.validate(JsString("")).isSuccess must beFalse
     }
 
     "minlength" in {
       val text = "0123456789"
-      minLength(4).isValid(JsString(text)) must beTrue
-      minLength(11).isValid(JsString(text)) must beFalse
+      minLength(4).validate(JsString(text)).isSuccess must beTrue
+      minLength(11).validate(JsString(text)).isSuccess must beFalse
     }
 
     "maxlength" in {
       val text = "0123456789"
-      maxLength(11).isValid(JsString(text)) must beTrue
-      maxLength(4).isValid(JsString(text)) must beFalse
+      maxLength(11).validate(JsString(text)).isSuccess must beTrue
+      maxLength(4).validate(JsString(text)).isSuccess must beFalse
     }
 
     "enum" in {
-      qbEnum("eddy", "otto", "dude").isValid(JsString("dude")) must beTrue
-      qbEnum("eddy", "otto", "dude").isValid(JsString("honk")) must beFalse
+      qbEnum("eddy", "otto", "dude").validate(JsString("dude")).isSuccess must beTrue
+      qbEnum("eddy", "otto", "dude").validate(JsString("honk")).isSuccess must beFalse
     }
 
     "email (pattern)" in {
-      qbEmail.isValid(JsString("otto@m-cube.de")) must beTrue
-      qbEmail.isValid(JsString("dude@@dude")) must beFalse
+      qbEmail.validate(JsString("otto@m-cube.de")).isSuccess must beTrue
+      qbEmail.validate(JsString("dude@@dude")).isSuccess must beFalse
     }
 
   }
@@ -43,13 +43,13 @@ class RulesSpec extends Specification {
   "Number Rules" should {
 
     "validate against a min constraint" in {
-      min(10).isValid(JsNumber(10)) must beTrue
-      min(10).isValid(JsNumber(5)) must beFalse
+      min(10).validate(JsNumber(10)).isSuccess must beTrue
+      min(10).validate(JsNumber(5)).isSuccess must beFalse
     }
 
     "max" in {
-      max(10).isValid(JsNumber(5)) must beTrue
-      max(10).isValid(JsNumber(11)) must beFalse
+      max(10).validate(JsNumber(5)).isSuccess must beTrue
+      max(10).validate(JsNumber(11)).isSuccess must beFalse
     }
 
   }
@@ -57,8 +57,8 @@ class RulesSpec extends Specification {
   "Boolean Rules" should {
 
     "validate JsBoolean correctly" in {
-      qbBoolean.isValid(JsBoolean(true)) must beTrue
-      qbBoolean.isValid(JsBoolean(false)) must beTrue
+      qbBoolean.validate(JsBoolean(true)).isSuccess must beTrue
+      qbBoolean.validate(JsBoolean(false)).isSuccess must beTrue
     }
 
   }
@@ -66,11 +66,11 @@ class RulesSpec extends Specification {
   "Uniqueness Rules" should {
 
     "check return true if the list only contains distinct elements" in {
-      qbList(qbNumber, unique).isValid(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(3)))) must beTrue
+      qbList(qbNumber, unique).validate(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(3)))).isSuccess must beTrue
     }
 
     "check return false if a list contains duplicates" in {
-      qbList(qbNumber, unique).isValid(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(2), JsNumber(3)))) must beFalse
+      qbList(qbNumber, unique).validate(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(2), JsNumber(3)))).isSuccess must beFalse
     }
   }
  
