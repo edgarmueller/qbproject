@@ -26,13 +26,11 @@ class JsOptionalAnnotationProcessor extends AnnotationProcessor {
    */
   def process(attr: QBAttribute, input: Option[JsValue], path: QBPath, jsObject: JsObject): Option[JsValue] = {
     val optionalAnnotation = attr.annotations.collectFirst { case optional: QBOptionalAnnotation => optional }
-    input.flatMap(x => {
-      optionalAnnotation.fold[Option[JsValue]](None)(annotation =>
-        if (jsObject.keys.contains(attr.name) && isNotNullOrUndefined(x)) {
-          Some(x)
-        } else {
-          annotation.fallBack.fold[Option[JsValue]](None)(Some(_))
-        })
-    })
+    optionalAnnotation.fold[Option[JsValue]](None)(annotation =>
+      if (jsObject.keys.contains(attr.name) && input.isDefined && isNotNullOrUndefined(input.get)) {
+        Some(input.get)
+      } else {
+        annotation.fallBack.fold[Option[JsValue]](None)(Some(_))
+      })
   }
 }

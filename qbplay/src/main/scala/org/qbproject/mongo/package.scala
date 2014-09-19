@@ -1,8 +1,12 @@
 package org.qbproject
 
+import java.util.regex.Pattern
+
 import org.qbproject.schema._
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
+
+import scalaz.{Failure, Success, Validation}
 
 package object mongo {
 
@@ -10,15 +14,22 @@ package object mongo {
     override def toString = "objectId"
   }
 
-  def objectId = new QBObjectId(Set(new ObjectIdRule))
+  object ObjectIdRule extends FormatRule[JsString] {
+    override def format: String = "objectId"
 
-  def objectId(endpoint: String) = new QBObjectId(Set(new ObjectIdRule, new KeyValueRule("endpoint", endpoint)))
+    val pattern = Pattern.compile("[0-9A-Fa-f]{24}")
 
-  class ObjectIdRule extends FormatRule[JsString] {
-    val format = "objectId"
-
-    def isValid(str: JsString): Boolean = BSONObjectID.parse(str.value).isSuccess
+    override def validate(a: JsString): Validation[ERRORS, JsString] =
+      if (pattern.matcher(a.value).matches()) {
+        Success(a)
+      } else {
+        Failure(List(ValidationError(s"'$a' doesn't comply with RegEx '${pattern.pattern()}'")))
+      }
   }
+
+  def objectId = new QBObjectId(Set(ObjectIdRule))
+
+  def objectId(endpoint: String) = new QBObjectId(Set(ObjectIdRule, new KeyValueRule("endpoint", endpoint)))
 
   def read(schema: QBClass)(instance: JsObject): JsResult[JsObject] = {
     new MongoTransformer(schema).fromMongoJson(instance)

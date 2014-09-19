@@ -37,9 +37,9 @@ class JsStringToNumberTypeProcessor extends TypeProcessor {
       case n: JsNumber => JsSuccess(n)
       case s: JsString =>
         fromTryCatch(s.value.toDouble)
-          .leftMap(t => ValidationError("qb.invalid.number.format" + ": " + t.getMessage))
+          .leftMap(t => List(ValidationError("qb.invalid.number.format" + ": " + t.getMessage)))
           .flatMap(d => qbType.validate(JsNumber(d)))
-          .fold(JsError(path.toJsPath, _), JsSuccess(_))
+          .fold(errors => JsError(Seq(path.toJsPath -> errors)), JsSuccess(_))
       case _ => JsError("qb.error.tolerant.number")
     }
   }
@@ -49,9 +49,9 @@ class JsStringToNumberTypeProcessor extends TypeProcessor {
       case n: JsNumber => JsSuccess(n)
       case s: JsString =>
         fromTryCatch(s.value.toDouble)
-          .leftMap(t => ValidationError("qb.invalid.number.format" + ": " + t.getMessage))
+          .leftMap(t => List(ValidationError("qb.invalid.number.format" + ": " + t.getMessage)))
           .flatMap(i => qbType.validate(JsNumber(i)))
-          .fold(JsError(path.toJsPath, _), JsSuccess(_))
+          .fold(errors => JsError(Seq(path.toJsPath -> errors)), JsSuccess(_))
       case _ => JsError("qb.error.tolerant.int")
     }
   }

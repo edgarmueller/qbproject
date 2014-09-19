@@ -1,16 +1,11 @@
 package org.qbproject.schema.internal.visitor
 
-import org.qbproject.schema.internal._
-import play.api.libs.json._
-import scalaz.Validation.fromTryCatch
 import org.qbproject.schema._
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsObject
+import org.qbproject.schema.internal._
+import play.api.data.validation.ValidationError
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsSuccess, _}
+
+import scalaz.Validation.fromTryCatch
 
 /**
  * <p>
@@ -95,9 +90,12 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    * @return a JsResult containing a result of type O
    */
   def process(schema: QBType, path: QBPath, input: JsValue): JsResult[O] = {
-    typeProcessors.get(schema.getClass).fold[JsResult[JsValue]] { JsSuccess(input) } {
-      _.process(schema, input, path)
-    }.flatMap { value =>
+    val r = typeProcessors.get(schema.getClass) match {
+      case Some(processor) => processor.process(schema, input, path)
+      case None => JsSuccess(input)
+    }
+
+    r.flatMap { value =>
       (schema, value) match {
         case (qbString: QBString,  jsString: JsString)  => processString(qbString, path, jsString)
         case (qbObject: QBClass,  jsObject: JsObject)  => processObject(qbObject, path, jsObject)
@@ -189,19 +187,22 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
     var errors: List[JsError] = List.empty
 
     schema.attributes.foreach(attr => {
-      val fieldValue = obj \ attr.name
       val attrPath = path.append(QBKeyPathNode(attr.name))
+      val maybeValue = obj.fieldSet.find(_._1 == attr.name)
 
-      val modifiedValue: Option[JsValue] = attr.annotations.foldLeft[Option[JsValue]](Some(fieldValue))((value, annotation) =>
-        annotationProcessors.get(annotation.getClass).fold {
-          value
-        } {
-          _.process(attr, value, attrPath, obj)
-        }
-      )
+      val modifiedValue: Option[JsValue] = attr.annotations.foldLeft(maybeValue.map(_._2)) {
+        (value, annotation) =>
+          annotationProcessors.get(annotation.getClass) match {
+            case Some(processor) => processor.process(attr, value, attrPath, obj)
+            case None => value
+          }
+      }
 
       modifiedValue match {
+        case None if attr.annotations.exists(_.isInstanceOf[QBOptionalAnnotation])=> // Attribute is optional
         case None => // annotation could not be handled gracefully, ignore attribute
+          errors ::= JsError(attrPath.toJsPath, ValidationError("Couldn't find Attribute at " + attrPath.toString))
+          hasErrors = true
         case Some(value) =>
           val result = process(attr.qbType, attrPath, value)
 
@@ -214,6 +215,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
             errors = result.asInstanceOf[JsError] :: errors
           }
       }
+
     })
 
     if (hasErrors && !ignoreMissingFields) {

@@ -101,7 +101,7 @@ trait QBArray extends QBType with QBBaseType with CompositeRule[JsArray] {
  * Companion object for QBArray.
  */
 class QBArrayImpl(qbType: () => QBType, val rules: Set[ValidationRule[JsArray]] = Set.empty) extends QBArray {
-  override def items = qbType()
+  lazy val items = qbType()
   override def equals(other: Any): Boolean = other match {
     case that: QBArrayImpl => that.items == items
     case _ => false

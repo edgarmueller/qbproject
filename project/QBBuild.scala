@@ -59,9 +59,11 @@ object QBBuild extends Build {
       libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play-json"         % playVersion,
         "com.mandubian"     %% "play-json-zipper"  % "1.2",
+        scalameter,
         scalaz,
         specs2
-      )
+      ),
+      testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     )
 
   lazy val playProject = Project("qbplay", file("qbplay"))
@@ -75,7 +77,7 @@ object QBBuild extends Build {
         "com.typesafe.play" %% "play-test"           % playVersion % "test",
         "com.mandubian"     %% "play-json-zipper"    % "1.2",
         "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
-        "com.storm-enroute" %% "scalameter"          % "0.6"      % "test",
+        scalameter,
         specs2
       ),
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
@@ -116,4 +118,6 @@ object QBBuild extends Build {
   val scalaz = "org.scalaz" %% "scalaz-core" % "7.0.6"
 
   val playVersion = "2.3.3"
+
+  val scalameter = "com.storm-enroute" %% "scalameter" % "0.6" % "test"
 }

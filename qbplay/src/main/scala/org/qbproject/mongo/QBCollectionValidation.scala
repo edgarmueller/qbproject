@@ -3,6 +3,7 @@ package org.qbproject.mongo
 import org.qbproject.schema._
 import org.qbproject.schema.{QBValidationException, QBClass, QBPartialValidator, QBSchema}
 import QBSchema._
+import org.slf4j.{LoggerFactory, Logger}
 
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,7 +14,7 @@ import scala.util.Success
 
 /** Automagically validates json in operations on a QBCollection */
 trait QBCollectionValidation extends QBMongoCollection { self: QBMongoCollection =>
-
+  val log = LoggerFactory.getLogger(getClass())
   /** Will be used to validate inputs and outputs */
   def schema: QBClass
 
@@ -37,7 +38,15 @@ trait QBCollectionValidation extends QBMongoCollection { self: QBMongoCollection
   }
 
   private def out(result: List[JsObject]) = {
-    result.flatMap { readFromMongo(_).asOpt }
+    result.flatMap {
+      obj =>
+      readFromMongo(obj) match {
+        case JsError(errors) =>
+          log.warn("Object from DB didn't pass validation. Errors: " + errors)
+          None
+        case JsSuccess(value, path) => Some(value)
+      }
+    }
   }
   
   // private def out[F[JsObject]]

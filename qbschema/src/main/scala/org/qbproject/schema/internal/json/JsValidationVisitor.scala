@@ -2,8 +2,11 @@ package org.qbproject.schema.internal.json
 
 import org.qbproject.schema.internal._
 import org.qbproject.schema.internal.visitor.QBPath
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import org.qbproject.schema.{QBArray, QBClass, QBPrimitiveType}
+
+import scalaz.{Failure, Success}
 
 /**
  * Validation behavior that calls the validates an instance against its schema.
@@ -24,11 +27,10 @@ trait JsValidationVisitor extends JsVisitor {
    * @return a JsResult containing a JsValue result
    */
   def atPrimitive[A <: JsValue](schema: QBPrimitiveType[A], jsValue: A, path: QBPath): JsResult[JsValue] = {
-    schema.validate(jsValue)
-      .fold(
-        JsError(path.toJsPath, _),
-        JsSuccess(_)
-      )
+    schema.validate(jsValue) match {
+      case Success(s) => JsSuccess(s)
+      case Failure(errors) => JsError(Seq(path.toJsPath -> errors))
+    }
   }
 
   /**
@@ -46,11 +48,10 @@ trait JsValidationVisitor extends JsVisitor {
    */
   def atArray(schema: QBArray, elements: Seq[JsValue], path: QBPath, jsArray: JsArray): JsResult[JsArray] = {
     val arr = JsArray(elements.toList)
-    schema.validate(arr)
-      .fold(
-        JsError(path.toJsPath, _),
-        JsSuccess(_)
-      )
+    schema.validate(arr) match {
+      case Success(s) => JsSuccess(s)
+      case Failure(errors) => JsError(Seq(path.toJsPath -> errors))
+    }
   }
 
   /**
@@ -68,10 +69,9 @@ trait JsValidationVisitor extends JsVisitor {
    */
   def atObject(schema: QBClass, fields: Seq[(String, JsValue)], path: QBPath, jsObject: JsObject): JsResult[JsObject] = {
     val obj = JsObject(fields.toList)
-    schema.validate(obj)
-      .fold(
-        JsError(path.toJsPath, _),
-        JsSuccess(_)
-      )
+    schema.validate(obj) match {
+      case Success(s) => JsSuccess(s)
+      case Failure(errors) => JsError(Seq(path.toJsPath -> errors))
+    }
   }
 }

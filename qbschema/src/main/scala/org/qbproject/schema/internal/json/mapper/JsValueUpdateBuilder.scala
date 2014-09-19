@@ -1,5 +1,7 @@
 package org.qbproject.schema.internal.json.mapper
 
+import java.util.logging.Logger
+
 import org.qbproject.schema.internal.visitor._
 import play.api.libs.json._
 import play.api.libs.json.extensions.JsExtensions
@@ -14,9 +16,7 @@ import org.qbproject.schema.QBType
  * @param schema
  *               a QB schema
  */
-class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty)
-  extends JsValueProcessor[Seq[(QBType, QBPath)]]
-  with JsValueUpdateVisitor {
+class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty) extends JsValueProcessor[Seq[(QBType, QBPath)]] with JsValueUpdateVisitor {
 
   /**
    * Allows to created a modified version of the passed JsObject by passing in
@@ -28,7 +28,7 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    */
   def byType[A <: QBType : ClassTag](updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
     val clazz = implicitly[ClassTag[A]].runtimeClass
-    val matcher = (q: QBType) =>  q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz
+    val matcher = (q: QBType) => q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz
     new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
   }
 
@@ -42,7 +42,7 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    */
   def byTypeAndPredicate[A <: QBType : ClassTag](pred: A => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
     val clazz = implicitly[ClassTag[A]].runtimeClass
-    val matcher = (q: QBType) =>  (q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz) && pred(q.asInstanceOf[A])
+    val matcher = (q: QBType) =>  ( q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz) && pred(q.asInstanceOf[A])
     new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
   }
 
@@ -96,11 +96,16 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    * @return a JsResult containing the possibly modified JsObject
    */
   def go(input: JsObject): JsObject = {
-    matchedPaths(input).foldLeft(input)((obj, pair) => {
+
+    val mp = matchedPaths(input)
+
+    mp.foldLeft(input)((obj, pair) => {
       val updater = getByType(pair._1).get._2
       obj.get(pair._2) match {
-        case _: JsUndefined => obj
-        case value => obj.set((pair._2, updater(value))).asInstanceOf[JsObject]
+        case _: JsUndefined =>
+          obj
+        case value =>
+          obj.set((pair._2, updater(value))).asInstanceOf[JsObject]
       }
     })
   }
