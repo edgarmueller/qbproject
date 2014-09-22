@@ -36,7 +36,8 @@ object QBBuild extends Build {
   val releaseSettings = ReleasePlugin.releaseSettings ++ bintrayPublishSettings ++ Seq(
       publishMavenStyle := true,
       publishTo := (publishTo in bintray.Keys.bintray).value, // set it globally so that sbt-release plugin does not freak out.
-      bintray.Keys.bintrayOrganization in bintray.Keys.bintray := Some("qbproject")
+      bintray.Keys.bintrayOrganization in bintray.Keys.bintray := Some("qbproject"),
+      ReleaseKeys.crossBuild := true
   )
 
   lazy val root = Project("qbroot", file("."))
