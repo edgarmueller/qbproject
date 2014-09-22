@@ -188,9 +188,14 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
 
     schema.attributes.foreach(attr => {
       val attrPath = path.append(QBKeyPathNode(attr.name))
-      val maybeValue = obj.fieldSet.find(_._1 == attr.name)
+      val jsValue = obj \ attr.name
+      val maybeValue = if (jsValue.isInstanceOf[JsUndefined]) {
+        None
+      } else {
+        Some(jsValue)
+      }
 
-      val modifiedValue: Option[JsValue] = attr.annotations.foldLeft(maybeValue.map(_._2)) {
+      val modifiedValue: Option[JsValue] = attr.annotations.foldLeft(maybeValue) {
         (value, annotation) =>
           annotationProcessors.get(annotation.getClass) match {
             case Some(processor) => processor.process(attr, value, attrPath, obj)
