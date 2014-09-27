@@ -21,12 +21,12 @@ import play.api.data.validation.ValidationError
 trait ValidationRule[TO_VALIDATE] {
 
   type ERRORS = List[ValidationError]
-  
+
   /**
    * Validates the given object and returns the validation status
    *
    * @param a
-             the object to be validated
+   *         the object to be validated
    * @return
    *         a validation result that may succeed or fail
    */
@@ -243,8 +243,64 @@ case class UniquenessRule() extends ValidationRule[JsArray] {
 //----------------------------------------------------------
 
 /**
+ * Validates an instance successfully if at least one schema is matched.
+ *
+ * @param schemas
+ *                all possible schemas
+ */
+// TODO: include validation result in validation error
+case class QBAnyOfRule(schemas: Seq[QBClass]) extends ValidationRule[JsObject] {
+
+  override def validate(obj: JsObject): Validation[ERRORS, JsObject] = {
+    val allValidationResults = schemas.map(QBValidator.validate(_)(obj))
+    allValidationResults.map(_.asOpt)
+      .find(_.isDefined)
+      .fold[Validation[ERRORS, JsObject]] {
+      Failure(List(ValidationError("qb.error.anyof")))
+    } { _ =>
+      Success(obj)
+    }
+  }
+}
+
+/**
+ * Validates an instance successfully if exactly one schema is matched.
+ *
+ * @param schemas
+ *                all possible schemas
+ */
+case class QBOneOfRule(schemas: Seq[QBClass]) extends ValidationRule[JsObject] {
+
+  override def validate(obj: JsObject): Validation[ERRORS, JsObject] = {
+    val allValidationResults = schemas.map(schema => QBValidator.validate(schema)(obj))
+    allValidationResults.count(_.asOpt.isDefined) match {
+      case 0 => Failure(List(ValidationError("qb.error.oneof.none")))
+      case 1 => Success(obj)
+      case _ => Failure(List(ValidationError("qb.error.oneof")))
+    }
+  }
+}
+
+/**
+ * Validates an instance successfully if all schemas are matched.
+ *
+ * @param schemas
+ *                all possible schemas
+ */
+case class QBAllOfRule(schemas: Seq[QBClass]) extends ValidationRule[JsObject] {
+
+  override def validate(obj: JsObject): Validation[ERRORS, JsObject] = {
+    val allValidationResults = schemas.map(schema => QBValidator.validate(schema)(obj))
+    allValidationResults.map(_.asOpt).forall(_.isDefined) match {
+      case true => Success(obj)
+      case false => Failure(List(ValidationError("qb.error.allof")))
+    }
+  }
+}
+
+/**
  * Rule that checks whether a given object has a minimum number of properties.
- * 
+ *
  * @param minProperties
  *            the minimum number of properties
  */

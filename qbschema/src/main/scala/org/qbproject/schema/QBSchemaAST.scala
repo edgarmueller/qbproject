@@ -43,9 +43,21 @@ trait QBClass extends QBType with QBBaseType with CompositeRule[JsObject] {
   override def toString = "object"
 }
 
+trait QBConstrainedClass extends QBClass {
+  def values: Seq[QBClass]
+}
+
+class QBOneOfImpl(val values: Seq[QBClass])
+  extends QBClassImpl(() => values.flatMap(_.attributes), Set(QBOneOfRule(values))) with QBConstrainedClass
+class QBAllOfImpl(val values: Seq[QBClass])
+  extends QBClassImpl(() => values.flatMap(_.attributes), Set(QBAllOfRule(values))) with QBConstrainedClass
+class QBAnyOfImpl(val values: Seq[QBClass])
+  extends QBClassImpl(() => values.flatMap(_.attributes), Set(QBAnyOfRule(values))) with QBConstrainedClass
+
+
 /**
  * QBObject constructor.
- * 
+ *
  * @param attrs
  *             the attributes of an object
  * @param rules
@@ -68,7 +80,7 @@ object QBClassImpl {
 
   /**
    * Creates an QBObject.
-   * 
+   *
    * @param attributes
    *           the attributes making up the object
    * @return the constructed object
@@ -172,13 +184,7 @@ trait QBBoolean extends QBPrimitiveType[JsBoolean] with QBBaseType {
 }
 case class QBBooleanImpl(rules: Set[ValidationRule[JsBoolean]] = Set.empty) extends QBBoolean
 
-/**
- * Validation related
- */
-trait QBOneOf extends QBType {
-  val values: Seq[QBClass]
-}
-case class QBOneOfImpl(values: Seq[QBClass]) extends QBOneOf
+import scalaz._
 
 /**
  * ----------------------------------------------------------

@@ -28,6 +28,10 @@ trait QBSchemaDSL {
   def qbClass(els: List[(String, QBType)], rules: ValidationRule[JsObject]*): QBClass =
     buildClass(els, rules.toSet)
 
+  def oneOf(values: QBClass*): QBClass = new QBOneOfImpl(values)
+  def allOf(values: QBClass*): QBClass = new QBAllOfImpl(values)
+  def anyOf(values: QBClass*): QBClass = new QBAnyOfImpl(values)
+
   private def buildClass(attributes: List[(String, QBType)], rules: Set[ValidationRule[JsObject]] = Set.empty): QBClass = {
     findDuplicates(attributes.map(_._1))(identity) match {
       case Nil => QBClassImpl(attributes.toList.map(tuple2attribute), rules)
@@ -120,7 +124,6 @@ trait QBSchemaDSL {
   /**
    * Object Rules
    */
-  def oneOf(values: QBClass*) = QBOneOfImpl(values.toList)
   def minProperties(min: Int) = MinPropertiesRule(min)
   def maxProperties(max: Int) = MaxPropertiesRule(max)
 
