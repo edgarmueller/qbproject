@@ -1,15 +1,14 @@
 package org.qbproject.schema.json
 
-import org.specs2.mutable.Specification
-import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.libs.json._
-import org.qbproject.schema.internal._
-import org.qbproject.schema.{QBClass, QBPartialValidator, QBValidator, QBSchema}
-import QBSchema._
-import scala.math.BigDecimal.int2bigDecimal
 import org.junit.runner.RunWith
+import org.qbproject.schema.QBSchema._
+import org.qbproject.schema.{QBClass, QBPartialValidator, QBSchema, QBValidator}
+import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.libs.json.{Json, _}
+
+import scala.math.BigDecimal.int2bigDecimal
 
 @RunWith(classOf[JUnitRunner])
 object JsValidationSpec extends Specification {
@@ -233,6 +232,9 @@ object JsValidationSpec extends Specification {
       result.asOpt must beEqualTo(Some(input))
     }
 
+    //
+    // oneOf constraint --
+    //
     "test oneOf object validation" in {
 
       val schema = qbClass(
@@ -248,6 +250,61 @@ object JsValidationSpec extends Specification {
       val o = qbClass(
         "i" -> QBSchema.oneOf(qbClass("x" -> qbNumber), qbClass("x" -> qbString)))
       QBValidator.validate(o)(Json.obj("j" -> Json.obj("xx" -> "wat"))).asOpt must beNone
+    }
+
+    "test oneOf object violation with two matching schemas" in {
+      val o = qbClass(
+        "i" -> QBSchema.oneOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      QBValidator.validate(o)(Json.obj("j" -> Json.obj("x" -> 3, "xx" -> "wat"))).asOpt must beNone
+    }
+
+    //
+    // allOf constraint --
+    //
+    "test allOf object validation" in {
+      val allOfSchema = qbClass(
+        "i" -> QBSchema.allOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      val result = QBValidator.validate(allOfSchema)(Json.obj("i" -> Json.obj("x" -> 3, "xx" -> "wat")))
+      result.asOpt must beSome
+    }
+
+    "test allOf object violation with only one valid schema" in {
+      val allOfSchema = qbClass(
+        "i" -> QBSchema.allOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      val result = QBValidator.validate(allOfSchema)(Json.obj("i" -> Json.obj("x" -> 3, "xy" -> "wat")))
+      result.asOpt must beNone
+    }
+
+    "test allOf object violation with none valid schema" in {
+      val allOfSchema = qbClass(
+        "i" -> QBSchema.allOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      val result = QBValidator.validate(allOfSchema)(Json.obj("i" -> Json.obj("a" -> 3, "b" -> "wat")))
+      result.asOpt must beNone
+    }
+
+    //
+    // anyOf constraint --
+    //
+    "test anyOf object violation" in {
+      val anyOfSchema = qbClass(
+        "i" -> QBSchema.anyOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      // field name 'j' instead of 'i'
+      val validationResult = QBValidator.validate(anyOfSchema)(Json.obj("j" -> Json.obj("x" -> 3, "xx" -> "wat")))
+      validationResult.asOpt must beNone
+    }
+
+    "test anyOf object validation with two valid schemas" in {
+      val anyOfSchema = qbClass(
+        "i" -> QBSchema.anyOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      val validationResult = QBValidator.validate(anyOfSchema)(Json.obj("i" -> Json.obj("x" -> 3, "xx" -> "wat")))
+      validationResult.asOpt must beSome
+    }
+
+    "test anyOf object validation with only one valid schema" in {
+      val anyOfSchema = qbClass(
+        "i" -> QBSchema.anyOf(qbClass("x" -> qbNumber), qbClass("xx" -> qbString)))
+      val result = QBValidator.validate(anyOfSchema)(Json.obj("i" -> Json.obj("x" -> 3)))
+      result.asOpt must beSome
     }
 
     "test recursive definition" in {

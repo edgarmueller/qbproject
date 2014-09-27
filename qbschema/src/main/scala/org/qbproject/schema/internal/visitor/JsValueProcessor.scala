@@ -5,8 +5,6 @@ import org.qbproject.schema.internal._
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsSuccess, _}
 
-import scalaz.Validation.fromTryCatch
-
 /**
  * <p>
  * A trait that encapsulates the logic of traversing an
@@ -103,7 +101,6 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
         case (qbBool:   QBBoolean, jsBool:   JsBoolean) => processBoolean(qbBool,  path, jsBool)
         case (qbNumber: QBNumber,  jsNumber: JsNumber)  => processNumber(qbNumber, path, jsNumber)
         case (qbInt:    QBInteger, jsInt:    JsNumber)  => processInteger(qbInt,   path, jsInt)
-        case (qbOneOf:  QBOneOf,   jsObject: JsObject)  => processOneOf(qbOneOf,   path, jsObject)
         case (_,                   jsUndefined: JsUndefined) => JsError(path.toJsPath, "qb.value.not.found")
         case _ => JsError(path.toJsPath, "qb.incompatible.types"
           + "[expected: " + schema.toString
@@ -185,6 +182,8 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
     var hasErrors = false
     var validFields: List[(String, O)] = List.empty
     var errors: List[JsError] = List.empty
+    // do not collect errors if schema is constrained class
+    val isConstrainedClass = schema.isInstanceOf[QBConstrainedClass]
 
     schema.attributes.foreach(attr => {
       val attrPath = path.append(QBKeyPathNode(attr.name))
@@ -207,20 +206,21 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
         case None if attr.annotations.exists(_.isInstanceOf[QBOptionalAnnotation])=> // Attribute is optional
         case None => // annotation could not be handled gracefully, ignore attribute
           errors ::= JsError(attrPath.toJsPath, ValidationError("Couldn't find Attribute at " + attrPath.toString))
-          hasErrors = true
+          if (!isConstrainedClass) {
+            hasErrors = true
+          }
         case Some(value) =>
           val result = process(attr.qbType, attrPath, value)
 
-          if (result.asOpt.isDefined) {
-            if (!result.get.isInstanceOf[JsUndefined]) {
-              validFields = (attr.name -> result.get) :: validFields
-            }
+          if (result.asOpt.isDefined && !result.get.isInstanceOf[JsUndefined]) {
+            validFields = (attr.name -> result.get) :: validFields
           } else {
-            hasErrors = true
-            errors = result.asInstanceOf[JsError] :: errors
+            if (!isConstrainedClass) {
+              hasErrors = true
+              errors = result.asInstanceOf[JsError] :: errors
+            }
           }
       }
-
     })
 
     if (hasErrors && !ignoreMissingFields) {
@@ -251,15 +251,5 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
     } else {
       JsError(elements.collect { case JsError(err) => err }.reduceLeft(_ ++ _))
     }
-  }
-
-  /**
-   * Process an one of object constraint.
-   */
-  def processOneOf(schema: QBOneOf, path: QBPath, obj: JsObject): JsResult[O] = {
-    schema.values
-      .map(o => fromTryCatch(processObject(o, path, obj)))
-      .find(result => result.toOption.isDefined && result.toOption.get.isInstanceOf[JsSuccess[_]])
-      .fold(JsError("qb.error.oneof").asInstanceOf[JsResult[O]])(_.toOption.get)
   }
 }
