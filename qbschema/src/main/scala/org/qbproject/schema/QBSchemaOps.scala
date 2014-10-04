@@ -4,7 +4,13 @@ import org.qbproject.schema.internal._
 import scala.reflect.ClassTag
 import scalaz._
 
-class QBSchemaOps extends QBBaseSchemaOps {
+/**
+ * Contains all schema operations.
+ *
+ * Generally, schema operations fail with an exception if an error occurs, since reasonable
+ * error handling in most cases isn't possible.
+ */
+class QBSchemaOps extends QBBaseSchemaOps { self =>
 
   /**
    * ----------------------------------------------------------
@@ -128,8 +134,8 @@ class QBSchemaOps extends QBBaseSchemaOps {
     def ?(subSchema: QBClass): QBClass = pathOfSubSchema(schema, subSchema).fold {
       schema
     } { subPath =>
-      val optionalSubSchema = subSchema.updateAttributes(_ => true)(attr => attr.addAnnotation(QBOptionalAnnotation()))
-      update[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => optionalSubSchema)
+      val optionalSubSchema = subSchema.updateAttributesByPredicate(_ => true)(attr => attr.addAnnotation(QBOptionalAnnotation()))
+      updateByPath[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => optionalSubSchema)
     }
 
     /**
@@ -249,8 +255,8 @@ class QBSchemaOps extends QBBaseSchemaOps {
       pathOfSubSchema(schema, subSchema).fold {
         schema
       } { subPath =>
-        val readOnlySubSchema = subSchema.updateAttributes(_ => true)(_.addAnnotation(QBReadOnlyAnnotation()))
-        update[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => readOnlySubSchema)
+        val readOnlySubSchema = subSchema.updateAttributesByPredicate(_ => true)(_.addAnnotation(QBReadOnlyAnnotation()))
+        updateByPath[QBClass](schema, subPath.toString.substring(1).replace("/", "."), _ => readOnlySubSchema)
       }
     }
 
@@ -264,7 +270,7 @@ class QBSchemaOps extends QBBaseSchemaOps {
      * @return the updated schema
      */
     def updateByPredicate(predicate: QBType => Boolean, updateFn: QBType => QBType): QBClass =
-      update(schema)(predicate)(updateFn).asInstanceOf[QBClass]
+      updateIf(schema)(predicate)(updateFn).asInstanceOf[QBClass]
 
 
     /**
@@ -278,7 +284,7 @@ class QBSchemaOps extends QBBaseSchemaOps {
      */
     def updateByType[A <: QBType : ClassTag](updateFn: QBType => QBType): QBClass = {
       val clazz = implicitly[ClassTag[A]].runtimeClass
-      update(schema)(qbType => clazz.isInstance(qbType))(updateFn).asInstanceOf[QBClass]
+      updateIf(schema)(qbType => clazz.isInstance(qbType))(updateFn).asInstanceOf[QBClass]
     }
 
     // TODO: caller must cast to object
@@ -291,8 +297,11 @@ class QBSchemaOps extends QBBaseSchemaOps {
      *                 the update function
      * @return the updated schema
      */
-    def updateAttributes(predicate: QBAttribute => Boolean)(updateFn: QBAttribute => QBAttribute): QBType =
-      updateAttributeByPredicate(schema)(predicate)(updateFn)
+    def updateAttributesByPredicate(predicate: QBAttribute => Boolean)(updateFn: QBAttribute => QBAttribute): QBType =
+      updateAttributeIf(schema)(predicate)(updateFn)
+
+    def update(qbType: QBType, pf: PartialFunction[QBType, QBType]) =
+      self.updateIf(qbType, pf)
 
     /**
      * Checks if a given predicate holds for all attributes.
