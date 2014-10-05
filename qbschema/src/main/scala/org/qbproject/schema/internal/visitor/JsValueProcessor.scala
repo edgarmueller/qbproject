@@ -23,9 +23,8 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsS
  * be called if the value processors encounters the appropriate elements.
  * </p>
  *
- * @tparam O the output type that is defined by the visitor
  */
-trait JsValueProcessor[O] { self: Visitor[O] =>
+trait JsValueProcessor {
 
   /**
    * The annotation-based processors.
@@ -65,7 +64,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *              the JsValue instance that should be compared against the schema
    * @return a JsResult containing a result of type O
    */
-  def process(schema: QBType)(input: JsValue): JsResult[O] = process(schema, QBPath(), input)
+  def process[O](schema: QBType)(input: JsValue)(implicit v: Visitor[O]): JsResult[O] = process(schema, QBPath(), input)(v)
 
   /**
    * Whether missing fields or array entries should emit an error.
@@ -87,7 +86,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *             the current JsValue
    * @return a JsResult containing a result of type O
    */
-  def process(schema: QBType, path: QBPath, input: JsValue): JsResult[O] = {
+  def process[O](schema: QBType, path: QBPath, input: JsValue)(implicit v: Visitor[O]): JsResult[O] = {
     val r = typeProcessors.get(schema.getClass) match {
       case Some(processor) => processor.process(schema, input, path)
       case None => JsSuccess(input)
@@ -120,8 +119,8 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *               the matched instance
    * @return a JsResult containing a result of type O
    */
-  def processInteger(schema: QBInteger, path: QBPath, int: JsNumber): JsResult[O] =
-    atPrimitive(schema, int, path)
+  def processInteger[O](schema: QBInteger, path: QBPath, int: JsNumber)(implicit v: Visitor[O]): JsResult[O] =
+    v.atPrimitive(schema, int, path)
 
   /**
    * Process a number.
@@ -134,8 +133,8 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *               the matched instance
    * @return a JsResult containing a result of type O
    */
-  def processNumber(schema: QBNumber, path: QBPath, number: JsNumber): JsResult[O] =
-    atPrimitive(schema, number, path)
+  def processNumber[O](schema: QBNumber, path: QBPath, number: JsNumber)(implicit v: Visitor[O]): JsResult[O] =
+    v.atPrimitive(schema, number, path)
 
   /**
    * Visit a string.
@@ -148,8 +147,8 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *               the matched instance
    * @return a JsResult containing a result of type O
    */
-  def processString(schema: QBString, path: QBPath, str: JsString): JsResult[O] =
-    atPrimitive(schema, str, path)
+  def processString[O](schema: QBString, path: QBPath, str: JsString)(implicit v: Visitor[O]): JsResult[O] =
+    v.atPrimitive(schema, str, path)
 
   /**
    * Process a boolean.
@@ -162,8 +161,8 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *               the matched instance
    * @return a JsResult containing a result of type O
    */
-  def processBoolean(schema: QBBoolean, path: QBPath, bool: JsBoolean): JsResult[O] =
-    atPrimitive(schema, bool, path)
+  def processBoolean[O](schema: QBBoolean, path: QBPath, bool: JsBoolean)(implicit v: Visitor[O]): JsResult[O] =
+    v.atPrimitive(schema, bool, path)
 
 
   /**
@@ -177,12 +176,11 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *             the matched JsObject
    * @return a JsResult containing a result of type O
    */
-  def processObject(schema: QBClass, path: QBPath, obj: JsObject): JsResult[O] = {
+  def processObject[O](schema: QBClass, path: QBPath, obj: JsObject)(implicit v: Visitor[O]): JsResult[O] = {
 
     var hasErrors = false
     var validFields: List[(String, O)] = List.empty
     var errors: List[JsError] = List.empty
-    // do not collect errors if schema is constrained class
     val isConstrainedClass = schema.isInstanceOf[QBConstrainedClass]
 
     schema.attributes.foreach(attr => {
@@ -226,7 +224,7 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
     if (hasErrors && !ignoreMissingFields) {
       JsError(errors.reverse.collect { case JsError(e) => e }.reduceLeft(_ ++ _))
     } else {
-      atObject(schema, validFields.reverse, path, obj)
+      v.atObject(schema, validFields.reverse, path, obj)
     }
   }
 
@@ -241,13 +239,13 @@ trait JsValueProcessor[O] { self: Visitor[O] =>
    *             the matched JsArray
    * @return a JsResult containing a result of type O
    */
-  def processArray(schema: QBArray, path: QBPath, arr: JsArray): JsResult[O] = {
+  def processArray[O](schema: QBArray, path: QBPath, arr: JsArray)(implicit v: Visitor[O]): JsResult[O] = {
     // TODO: subject to be optimized like visitObject
     val elements = arr.value.indices.map(idx => {
       process(schema.items, path.append(QBIdxNode(idx)), arr.value(idx))
     })
     if (!elements.exists(_.asOpt.isEmpty)) {
-      atArray(schema, elements.collect { case JsSuccess(res, _) => res }, path, arr)
+      v.atArray(schema, elements.collect { case JsSuccess(res, _) => res }, path, arr)
     } else {
       JsError(elements.collect { case JsError(err) => err }.reduceLeft(_ ++ _))
     }

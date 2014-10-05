@@ -1,18 +1,18 @@
 package org.qbproject.schema.internal.json.mapper
 
-import scala.reflect.ClassTag
+import org.qbproject.schema.QBType
 import org.qbproject.schema.internal.visitor._
 import play.api.libs.json._
 import play.api.libs.json.extensions.JsExtensions
-import org.qbproject.schema.QBType
+
+import scala.reflect.ClassTag
 
 /**
  * Visitor that finds all types and paths for which the matcher evaluates to true and modifies them via the map
  * method.
  */
-class JsValueUpdate[A <: QBType : ClassTag]()
-  extends JsValueProcessor[Seq[(QBType, QBPath)]]
-  with JsValueUpdateVisitor {
+class JsValueUpdateProcessor[A <: QBType : ClassTag]()
+  extends JsValueProcessor {
 
   /**
    * @inheritdoc
@@ -43,7 +43,7 @@ class JsValueUpdate[A <: QBType : ClassTag]()
    * @return a JsResult containing all JsPaths that comply to the desired type
    */
   def matchedPaths(schema: QBType)(input: JsValue): JsResult[Seq[JsPath]] = {
-    process(schema, QBPath(), input).map(_.map(_._2)).map(_.map(_.toJsPath))
+    process(schema, QBPath(), input)(JsValueUpdateVisitor(matcher)).map(_.map(_._2).map(_.toJsPath))
   }
 
   /**

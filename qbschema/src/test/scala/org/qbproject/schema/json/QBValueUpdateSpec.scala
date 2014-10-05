@@ -9,7 +9,7 @@ import java.util.Date
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.qbproject.schema.internal.json.mapper.JsValueUpdateBuilder
-import org.qbproject.schema.QBValueUpdate
+import org.qbproject.schema.QBJsValueUpdater
 import play.api.libs.json.JsString
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject
@@ -33,14 +33,14 @@ class QBValueUpdateSpec extends Specification {
     "should find all integers" in {
       val schema = qbClass("s" -> qbString, "i" -> qbInteger)
       val instance = Json.obj("s" -> "foo", "i" -> 3)
-      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBJsValueUpdater[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(1)
     }
 
     "find all, also nested, integers" in {
       val schema = qbClass("o" -> qbString, "i" -> qbInteger, "x" -> qbClass("e" -> qbInteger))
       val instance = Json.obj("o" -> "foo", "i" -> 3, "x" -> Json.obj("e" -> 4))
-      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBJsValueUpdater[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(2)
       matchedPaths.get(1) must beEqualTo(JsPath() \ "x" \ "e")
       matchedPaths.get(1) must beEqualTo(JsPath() \ "x" \ "e")
@@ -49,7 +49,7 @@ class QBValueUpdateSpec extends Specification {
     "find integers in an array" in {
       val schema = qbClass("o" -> qbString, "x" -> qbList(qbClass("d" -> qbInteger, "e" -> qbInteger)))
       val instance = Json.obj("o" -> "foo", "x" -> List(Json.obj("d" -> 4, "e" -> 5)))
-      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBJsValueUpdater[QBInteger]().matchedPaths(schema)(instance)
       matchedPaths.get.size must beEqualTo(2)
     }
 
@@ -67,7 +67,7 @@ class QBValueUpdateSpec extends Specification {
           "d" -> 4,
           "e" -> 5)))
 
-      val matchedPaths = QBValueUpdate[QBInteger]().matchedPaths(schema)(instance)
+      val matchedPaths = QBJsValueUpdater[QBInteger]().matchedPaths(schema)(instance)
       val updatedObject = matchedPaths.get.foldLeft(instance)((o, path) => {
         o.set((path, JsNumber(o.get(path).as[JsNumber].value + 1))).asInstanceOf[JsObject]
       })
@@ -76,7 +76,7 @@ class QBValueUpdateSpec extends Specification {
     }
 
     "find and increment integers in an array via map" in {
-      val updatedObject = QBValueUpdate[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBJsValueUpdater[QBInteger]().map(schema)(instance) {
         case JsNumber(n) => JsNumber(n + 1)
       }.get
 
@@ -134,12 +134,12 @@ class QBValueUpdateSpec extends Specification {
     }
 
     "find and uppercase all strings via toUpperCase" in {
-      val updatedObject = QBValueUpdate[QBString]().map(schema)(instance)(toUpperCase).get
+      val updatedObject = QBJsValueUpdater[QBString]().map(schema)(instance)(toUpperCase).get
       (updatedObject \ "o") must beEqualTo(JsString("FOO"))
     }
 
     "find and convert numbers to strings" in {
-      val updatedObject = QBValueUpdate[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBJsValueUpdater[QBInteger]().map(schema)(instance) {
         case JsNumber(n) => JsString(n.intValue().toString)
       }.get
 

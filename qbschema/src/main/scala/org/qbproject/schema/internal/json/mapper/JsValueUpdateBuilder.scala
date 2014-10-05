@@ -1,12 +1,11 @@
 package org.qbproject.schema.internal.json.mapper
 
-import java.util.logging.Logger
-
+import org.qbproject.schema.QBType
 import org.qbproject.schema.internal.visitor._
 import play.api.libs.json._
 import play.api.libs.json.extensions.JsExtensions
+
 import scala.reflect.ClassTag
-import org.qbproject.schema.QBType
 
 /**
  * A JsValueProcessor that finds all types and paths for which the matcher evaluates to true and modifies them via the map
@@ -16,7 +15,8 @@ import org.qbproject.schema.QBType
  * @param schema
  *               a QB schema
  */
-class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty) extends JsValueProcessor[Seq[(QBType, QBPath)]] with JsValueUpdateVisitor {
+class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty)
+  extends JsValueProcessor {
 
   /**
    * Allows to created a modified version of the passed JsObject by passing in
@@ -40,9 +40,9 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    *              the partial function that describes how to modify the matched type
    * @return a JsResult containing the possibly modified JsObject
    */
-  def byTypeAndPredicate[A <: QBType : ClassTag](pred: A => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
+  def byTypeAndPredicate[A <: QBType : ClassTag](predicate: A => Boolean)(updater: PartialFunction[JsValue, JsValue]): JsValueUpdateBuilder = {
     val clazz = implicitly[ClassTag[A]].runtimeClass
-    val matcher = (q: QBType) =>  ( q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz) && pred(q.asInstanceOf[A])
+    val matcher = (q: QBType) =>  ( q.getClass.getInterfaces.contains(clazz) || q.getClass == clazz) && predicate(q.asInstanceOf[A])
     new JsValueUpdateBuilder(schema, (matcher -> updater) :: mappings)
   }
 
@@ -84,7 +84,7 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    * @return a Seq containing tuples of the matched type and its JsPath
    */
   def matchedPaths(input: JsValue): Seq[(QBType, JsPath)] = {
-    process(schema, QBPath(), input).getOrElse(List.empty).map(pair =>
+    process(schema, QBPath(), input)(JsValueUpdateVisitor(matcher)).getOrElse(List.empty).map(pair =>
       pair._1 -> pair._2.toJsPath)
   }
 

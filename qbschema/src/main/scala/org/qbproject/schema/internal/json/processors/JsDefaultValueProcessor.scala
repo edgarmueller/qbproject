@@ -1,15 +1,9 @@
 package org.qbproject.schema.internal.json.processors
 
-import play.api.libs.json._
-import org.qbproject.schema.internal._
-import org.qbproject.schema.internal.visitor.{Visitor, AnnotationProcessor, JsValueProcessor}
-import org.qbproject.schema._
-import org.qbproject.schema.QBBooleanImpl
-import org.qbproject.schema.QBIntegerImpl
-import org.qbproject.schema.QBDefaultAnnotation
-import org.qbproject.schema.QBNumberImpl
+import org.qbproject.schema.{QBBooleanImpl, QBDefaultAnnotation, QBIntegerImpl, QBNumberImpl, _}
+import org.qbproject.schema.internal.visitor.{AnnotationProcessor, JsValueProcessor}
 
-trait JsDefaultValueProcessor extends JsValueProcessor[JsValue] { self: Visitor[JsValue] =>
+trait JsDefaultValueProcessor extends JsValueProcessor {
 
   override def createAnnotationProcessors: Map[Class[_], AnnotationProcessor] = Map(
     classOf[QBOptionalAnnotation] -> new JsOptionalAnnotationProcessor(),

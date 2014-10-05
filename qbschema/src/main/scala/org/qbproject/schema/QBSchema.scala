@@ -8,7 +8,7 @@ import org.qbproject.schema.internal.json._
 import org.qbproject.schema.internal.json.serialization.JSONSchemaReads
 import org.qbproject.schema.internal.json.serialization.JSONSchemaAnnotationWrites
 import org.qbproject.schema.internal.json.processors.JsDefaultValueProcessor
-import org.qbproject.schema.internal.json.mapper.{JsValueUpdate, JsValueUpdateOps}
+import org.qbproject.schema.internal.json.mapper.{JsValueUpdateProcessor, JsValueUpdateOps}
 
 object QBSchema
   extends QBSchemaOps 
@@ -17,12 +17,15 @@ object QBSchema
   with JSONSchemaAnnotationWrites
   with JsValueUpdateOps
 
-trait QBValidator extends JsDefaultValueProcessor with JsValidationVisitor {
+trait QBValidator extends JsDefaultValueProcessor {
+
+  val validationInstance = JsValidationVisitor()
+
   def validateJsValue(schema: QBType)(input: JsValue): JsResult[JsValue] =
-    process(schema, QBPath(), input)
+    process(schema, QBPath(), input)(validationInstance)
 
   def validate(schema: QBClass)(input: JsObject): JsResult[JsObject] =
-    process(schema, QBPath(), input).asInstanceOf[JsResult[JsObject]]
+    process(schema, QBPath(), input)(validationInstance).asInstanceOf[JsResult[JsObject]]
 }
 
 trait PartialValidator { self: QBValidator =>
@@ -34,4 +37,4 @@ object QBPartialValidator extends QBValidator with PartialValidator
 
 case class QBJson(json: JsObject, schema: QBClass)
 
-case class QBValueUpdate[A <: QBType : ClassTag]() extends JsValueUpdate[A]
+case class QBJsValueUpdater[A <: QBType : ClassTag]() extends JsValueUpdateProcessor[A]
