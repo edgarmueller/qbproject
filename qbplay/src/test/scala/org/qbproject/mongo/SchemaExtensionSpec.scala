@@ -17,7 +17,7 @@ object SchemaExtensionSpec extends Specification {
       val schema = qbClass("img" -> image)
       val instance = Json.obj("img" -> "otto.png")
 
-      QBJsValueUpdater[QBImage]().map(schema)(instance) {
+      QBJsValueUpdater[QBImage]().update(schema)(instance) {
         case JsString(path) => JsString("public/images/" + path)
       }.get must beEqualTo(Json.obj("img" -> "public/images/otto.png"))
     }

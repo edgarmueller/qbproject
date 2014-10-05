@@ -58,7 +58,7 @@ class JsValueUpdateProcessor[A <: QBType : ClassTag]()
    *              the partial function that describes how to modify the matched type
    * @return a JsResult containing the possibly modified JsObject
    */
-  def map(schema: QBType)(input: JsObject)(updater: PartialFunction[JsValue, JsValue]): JsResult[JsObject] = {
+  def update(schema: QBType)(input: JsObject)(updater: PartialFunction[JsValue, JsValue]): JsResult[JsObject] = {
     matchedPaths(schema)(input).map(
       _.foldLeft(input)((obj, path) => {
         obj.set((path, updater(obj.get(path)))).asInstanceOf[JsObject]
