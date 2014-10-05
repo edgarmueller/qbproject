@@ -1,11 +1,13 @@
 package org.qbproject
 
-import play.api.libs.json._
-import org.qbproject.schema._
 import org.qbproject.schema.internal.QBSchemaUtil
+import play.api.data.validation.ValidationError
+import play.api.libs.json._
 
 
 package object schema {
+
+  type ERRORS = List[ValidationError]
 
   implicit def toJsObject(qbJs: QBJson): JsObject = qbJs.json
   implicit def toQBObject(qbJs: QBJson): QBClass = qbJs.schema
