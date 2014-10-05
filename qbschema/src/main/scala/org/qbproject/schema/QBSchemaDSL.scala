@@ -3,7 +3,6 @@ package org.qbproject.schema
 import java.util.regex.Pattern
 
 import play.api.libs.json._
-import scala.Some
 
 /**
  * QB DSL.
@@ -120,6 +119,8 @@ trait QBSchemaDSL {
    * Array Rules
    */
   def unique: ValidationRule[JsArray] = UniquenessRule()
+  def minItems(minItems: Int): ValidationRule[JsArray] = MinItemsRule(minItems)
+  def maxItems(maxItems: Int): ValidationRule[JsArray] = MaxItemsRule(maxItems)
 
   /**
    * Object Rules

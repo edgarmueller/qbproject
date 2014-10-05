@@ -63,16 +63,32 @@ class RulesSpec extends Specification {
 
   }
 
-  "Uniqueness Rules" should {
+  "Array Rules" should {
 
-    "check return true if the list only contains distinct elements" in {
-      qbList(qbNumber, unique).validate(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(3)))).isSuccess must beTrue
+    "validate UNIQUE rule successfully if the list only contains distinct elements" in {
+      qbList(qbNumber, unique).validate(Json.arr(1, 2, 3)).isSuccess must beTrue
     }
 
-    "check return false if a list contains duplicates" in {
-      qbList(qbNumber, unique).validate(JsArray(Seq(JsNumber(1), JsNumber(2), JsNumber(2), JsNumber(3)))).isSuccess must beFalse
+    "NOT validate UNIQUE rule if a list contains duplicates" in {
+      qbList(qbNumber, unique).validate(Json.arr(1, 2, 3, 3)).isSuccess must beFalse
+    }
+
+    "validate MIN_ITEMS rule successfully if the list contains at least the specified number of elements" in {
+      qbList(qbNumber, minItems(3)).validate(Json.arr(1, 2, 3)).isSuccess must beTrue
+    }
+
+    "NOT validate MIN_ITEMS rule if a list contains less than the specified number of elements" in {
+      qbList(qbNumber, minItems(3)).validate(Json.arr(1, 2)).isSuccess must beFalse
+    }
+
+    "validate MAX_ITEMS rule successfully if a list contains at most the specified number of elements" in {
+      qbList(qbNumber, maxItems(3)).validate(Json.arr(1, 2, 3)).isSuccess must beTrue
+    }
+
+    "NOT validate MAX_ITEMS rule if a list contains more than the specified number of elements" in {
+      qbList(qbNumber, maxItems(3)).validate(Json.arr(1, 2, 3, 4)).isSuccess must beFalse
     }
   }
- 
+
 
 }

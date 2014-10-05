@@ -7,6 +7,14 @@ import play.api.libs.json._
  */
 trait QBType
 
+object QBType {
+
+  implicit class QBTypeOps(schema: QBType) {
+    def as[A <: QBType]: A = schema.asInstanceOf[A]
+  }
+
+}
+
 /**
  * Marker for all primitive QB types, which are numbers, strings and booleans.
  *

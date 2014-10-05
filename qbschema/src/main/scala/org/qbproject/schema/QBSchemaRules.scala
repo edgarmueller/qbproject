@@ -9,6 +9,8 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
 
+
+
 //----------------------------------------------------------
 // 	Rule definitions
 //----------------------------------------------------------
@@ -57,6 +59,7 @@ trait CompositeRule[A <: JsValue] extends ValidationRule[A] {
    * a validation result that may succeed or fail
    */
   override def validate(a: A): Validation[ERRORS, A] = {
+    // same as (acc, rule) => acc.+++(rule.validate(a))(Semigroup.firstSemigroup, Scalaz.listMonoid[ValidationError])
     rules.foldLeft[Validation[ERRORS, A]](Success(a)) {
       (acc, rule) => (acc, rule.validate(a)) match {
         case (Success(s1), Success(s2)) => Success(s1)
@@ -234,6 +237,32 @@ case class UniquenessRule() extends ValidationRule[JsArray] {
       Success(arr)
     } else {
       Failure(List(ValidationError("qb.arr.uniqueness.violated")))
+    }
+  }
+}
+
+/**
+ * Array rule that checks whether an array has at least the specified number of elements.
+ */
+case class MinItemsRule(minItems: Int) extends ValidationRule[JsArray] {
+  override def validate(arr: JsArray): Validation[ERRORS, JsArray] = {
+    if (arr.value.size >= minItems) {
+      Success(arr)
+    } else {
+      Failure(List(ValidationError("qb.arr.minItems.violated")))
+    }
+  }
+}
+
+/**
+ * Array rule that checks whether an array has at most the specified number of elements.
+ */
+case class MaxItemsRule(maxItems: Int) extends ValidationRule[JsArray] {
+  override def validate(arr: JsArray): Validation[ERRORS, JsArray] = {
+    if (arr.value.size <= maxItems) {
+      Success(arr)
+    } else {
+      Failure(List(ValidationError("qb.arr.maxItems.violated")))
     }
   }
 }

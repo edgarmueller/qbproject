@@ -25,7 +25,7 @@ class ReadOnlyAnnotationVisitorExtension extends AnnotationProcessor {
   }
 }
 
-object JsVisitorTestExtensions extends JsDefaultValueProcessor with JsValidationVisitor {
+object JsVisitorTestExtensions extends JsDefaultValueProcessor {
   override def createAnnotationProcessors: Map[Class[_], AnnotationProcessor] = {
     super.createAnnotationProcessors + (classOf[QBReadOnlyAnnotation] -> new ReadOnlyAnnotationVisitorExtension)
   }
@@ -39,7 +39,7 @@ class JsVisitorExtensionsSpec extends Specification {
         QBAttribute("s", QBStringImpl(), List(QBOptionalAnnotation(Some(JsString("foo"))), QBReadOnlyAnnotation()))
       ))
       val instance = Json.obj()
-      val result = JsVisitorTestExtensions.process(schema)(instance)
+      val result = JsVisitorTestExtensions.process(schema)(instance)(JsValidationVisitor())
       result.get \ "s" must beEqualTo(JsString("foobar"))
     }
   }
