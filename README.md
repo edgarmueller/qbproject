@@ -95,7 +95,7 @@ val images = qbList(qbClass(
 ))
 
 // Use the helpers provided by QB to transform your JSON. E.g. prepending an URL to every MyImage type.
-QBTypeMapper[MyImage]().map(schema)(instance) {
+QBJsValueUpdater[MyImage]().update(schema)(instance) {
   case JsString(path) => JsString("http://qbproject.org/images/" + path)
 }
 ```
@@ -110,17 +110,16 @@ qbCSV is an adapter for qbSchema, it allows transforming CSV to JSON using the m
 
 ### Getting started
 
-We will release a tutorial very soon. Stay tuned!
-// TODO: how to get started
+For a tutorial on how to get started please see the [qb homepage](http://qb-project.github.io/learn).
 
 ```scala
 // Add a resolver
 "QB repository" at "http://dl.bintray.com/qbproject/maven"
 
 // Add these dependencies
-val qbSchema        = "org.qbproject"    %% "qbschema"    % "0.3"
-val qbPlay          = "org.qbproject"    %% "qbplay"      % "0.3"
-val qbCSV           = "org.qbproject"    %% "qbcsv"       % "0.3"
+val qbSchema        = "org.qbproject"    %% "qbschema"    % "0.4-rc6"
+val qbPlay          = "org.qbproject"    %% "qbplay"      % "0.4-rc6"
+val qbCSV           = "org.qbproject"    %% "qbcsv"       % "0.4-rc6"
 ```
 
 ### Contribute
