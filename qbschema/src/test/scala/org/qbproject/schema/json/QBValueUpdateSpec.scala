@@ -76,7 +76,7 @@ class QBValueUpdateSpec extends Specification {
     }
 
     "find and increment integers in an array via map" in {
-      val updatedObject = QBJsValueUpdater[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBJsValueUpdater[QBInteger]().update(schema)(instance) {
         case JsNumber(n) => JsNumber(n + 1)
       }.get
 
@@ -134,12 +134,12 @@ class QBValueUpdateSpec extends Specification {
     }
 
     "find and uppercase all strings via toUpperCase" in {
-      val updatedObject = QBJsValueUpdater[QBString]().map(schema)(instance)(toUpperCase).get
+      val updatedObject = QBJsValueUpdater[QBString]().update(schema)(instance)(toUpperCase).get
       (updatedObject \ "o") must beEqualTo(JsString("FOO"))
     }
 
     "find and convert numbers to strings" in {
-      val updatedObject = QBJsValueUpdater[QBInteger]().map(schema)(instance) {
+      val updatedObject = QBJsValueUpdater[QBInteger]().update(schema)(instance) {
         case JsNumber(n) => JsString(n.intValue().toString)
       }.get
 
