@@ -6,6 +6,63 @@ import scoverage.ScoverageSbtPlugin
 import sbtrelease.ReleasePlugin
 import sbtrelease.ReleasePlugin._
 
+object Version {
+  val jsonZipper    = "1.2"
+  val play          = "2.3.3"
+  val openCsv       = "2.1"
+  val reactiveMongo = "0.10.5.akka23-SNAPSHOT"
+  val scalaz        = "7.0.6"
+  val scalameter    = "0.6"
+  val specs2        = "2.3.12"
+}
+
+object Library {
+
+  val jsonZipper    = "com.mandubian"     %% "play-json-zipper"    % Version.jsonZipper
+  val openCsv       = "net.sf.opencsv"    %  "opencsv"             % Version.openCsv
+  val play          = "com.typesafe.play" %% "play"                % Version.play
+  val playJson      = "com.typesafe.play" %% "play-json"           % Version.play
+  val reactiveMongo = "org.reactivemongo" %% "play2-reactivemongo" % Version.reactiveMongo
+  val scalaz        = "org.scalaz"        %% "scalaz-core"         % Version.scalaz
+  val playTest      = "com.typesafe.play" %% "play-test"           % Version.play           % "test"
+  val scalameter    = "com.storm-enroute" %% "scalameter"          % Version.scalameter     % "test"
+  val specs2        = "org.specs2"        %% "specs2"              % Version.specs2         % "test"
+
+}
+
+object Dependencies {
+  import Library._
+
+  val qbSchema = List(
+    playJson,
+    jsonZipper,
+    scalaz,
+    scalameter,
+    specs2
+  )
+
+  val qbPlay = List(
+    play,
+    playTest,
+    jsonZipper,
+    reactiveMongo,
+    scalameter,
+    specs2
+  )
+
+  val qbCsv = List(
+    playJson,
+    openCsv,
+    scalaz,
+    specs2
+  )
+
+  val sample = List(
+    scalaz,
+    specs2
+  )
+}
+
 object QBBuild extends Build {
 
   val QBRepositories = Seq(
@@ -57,13 +114,7 @@ object QBBuild extends Build {
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
-      libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play-json"         % playVersion,
-        "com.mandubian"     %% "play-json-zipper"  % "1.2",
-        scalameter,
-        scalaz,
-        specs2
-      ),
+      libraryDependencies ++= Dependencies.qbSchema,
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     )
 
@@ -73,14 +124,7 @@ object QBBuild extends Build {
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
-      libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play"                % playVersion,
-        "com.typesafe.play" %% "play-test"           % playVersion % "test",
-        "com.mandubian"     %% "play-json-zipper"    % "1.2",
-        "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
-        scalameter,
-        specs2
-      ),
+      libraryDependencies ++= Dependencies.qbPlay,
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     ).dependsOn(schemaProject)
 
@@ -90,12 +134,7 @@ object QBBuild extends Build {
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
-      libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play-json"           % playVersion,
-        "net.sf.opencsv"    %  "opencsv"             % "2.1",
-        scalaz,
-        specs2
-      )
+      libraryDependencies ++= Dependencies.qbCsv
     ).dependsOn(schemaProject)
 
   lazy val playSampleProject = Project("qbplay-sample", file("qbplay-sample"))
@@ -105,20 +144,12 @@ object QBBuild extends Build {
 //    .settings(playScalaSettings : _*)
     .settings(
       resolvers ++= QBRepositories,
-      libraryDependencies ++= Seq(
-        "junit"      %  "junit"       % "4.8"  % "test",
-        scalaz,
-        specs2
-      )
+      libraryDependencies ++= Dependencies.sample
     )
     .dependsOn(schemaProject,playProject)
     .aggregate(schemaProject,playProject)
 
-  val specs2 = "org.specs2" %% "specs2" % "2.3.12" % "test"
 
-  val scalaz = "org.scalaz" %% "scalaz-core" % "7.0.6"
 
-  val playVersion = "2.3.3"
 
-  val scalameter = "com.storm-enroute" %% "scalameter" % "0.6" % "test"
 }
