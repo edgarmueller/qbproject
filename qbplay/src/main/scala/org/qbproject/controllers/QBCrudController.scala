@@ -15,15 +15,20 @@ trait QBCrudController extends QBAPIController { self =>
   def updateSchema = collection.schema
 
   // Routes --
-  def getAllRoute =  GET    / ?             to getAll
-  def getByIdRoute = GET    /  string       to getById
-  def createRoute =  POST   / ?             to create
-  def updateRoute =  POST   /  string       to update 
+  def getAllRoute       =  GET   / ?                  to getAll
+  def getByIdRoute      = GET   / string             to getById
+  def createRoute       =  POST  / ?                  to create
+  def updateRoute       =  POST  / string             to update
+  def deleteByPostRoute =  POST  / "delete" / string  to delete
+  def deleteRoute       =  DELETE / string            to delete
+
 
   def crudRoutes: List[QBRoute] = List(
     getAllRoute,
     getByIdRoute,
     createRoute,
+    deleteRoute,
+    deleteByPostRoute,
     updateRoute)
 
   // --
@@ -77,4 +82,11 @@ trait QBCrudController extends QBAPIController { self =>
     }
   }
 
+  // TODO: current behaviour also returns true, if there is no document to delete
+  //       verify, whether this behavior is wanted or not
+  def delete(id: String) =  Action.async {
+    collection.delete(id).map { result =>
+      Ok(Json.obj("deleteSuccess" -> result))
+    }
+  }
 }
