@@ -54,6 +54,11 @@ import QBCollectionValidationSpec._
       mock.create(sampleJson) must beEqualTo(sampleJson).await
     }
 
+    "validate delete" in {
+      mock.create(sampleJson) must beEqualTo(sampleJson).await
+      mock.delete(id) must beEqualTo(true).await
+    }
+
     "validate create on json with no id" in {
       mock.create(sampleCreateJson) must beEqualTo(sampleJson).await
     }
@@ -150,6 +155,15 @@ object QBCollectionValidationSpec {
 
     override def create(obj: JsObject): Future[JsObject] = {
       Future.successful(mongoJson)
+    }
+
+    // TODO: mock should act upon underlying collection
+    override def delete(objId: ID): Future[Boolean] = {
+      if (objId == id) {
+        Future.successful(true)
+      } else {
+        Future.successful(false)
+      }
     }
   }
 }

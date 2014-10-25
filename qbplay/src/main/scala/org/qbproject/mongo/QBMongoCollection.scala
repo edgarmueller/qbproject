@@ -1,10 +1,5 @@
 package org.qbproject.mongo
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.json.ImplicitBSONHandlers._
-
 import reactivemongo.api._
 import reactivemongo.bson._
 import reactivemongo.core.commands._
@@ -12,6 +7,7 @@ import reactivemongo.core.commands._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
+import play.modules.reactivemongo.json.collection.JSONCollection
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
 
@@ -50,13 +46,23 @@ class QBMongoCollection(collectionName: String)(db: DB) {
     db.command(FindAndModify(
       collection.name,
       query,
-      Update(modifier, true),
+      Update(modifier, fetchNewObject = true),
       upsert
     )).map(_.map(bsonToJson))
   }
 
   def getById(id: ID): Future[Option[JsObject]] = {
     collection.find(Json.obj("_id" -> Json.obj("$oid" -> id))).cursor[JsObject].headOption
+  }
+
+  def delete(id: ID): Future[Boolean]  = {
+    val selector = Json.obj("_id" -> Json.obj("$oid" -> id))
+    collection.remove(selector).map { lastError =>
+      true
+    } recover {
+      // TODO: log exception or return in it json object
+      case exception => false
+    }
   }
 
   def create(obj: JsObject): Future[JsObject] = {
