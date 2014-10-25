@@ -73,8 +73,8 @@ object QBBuild extends Build {
     "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/tree/master/releases"
   )
 
-  val buildSettings = Project.defaultSettings ++
-    Seq(ScoverageSbtPlugin.instrumentSettings:_*) ++
+
+  val commonSettings = Seq(ScoverageSbtPlugin.instrumentSettings:_*) ++
     Seq(CoverallsPlugin.coverallsSettings:_*) ++
     Seq(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*) ++
     Seq(
@@ -89,6 +89,9 @@ object QBBuild extends Build {
       Keys.fork in Test := false,
       Keys.parallelExecution in Test := false
     )
+
+  // TODO: remove setting
+  val buildSettings = Project.defaultSettings ++ commonSettings
 
   val releaseSettings = ReleasePlugin.releaseSettings ++ bintrayPublishSettings ++ Seq(
       publishMavenStyle := true,
@@ -139,9 +142,8 @@ object QBBuild extends Build {
 
   lazy val playSampleProject = Project("qbplay-sample", file("qbplay-sample"))
     .enablePlugins(play.PlayScala)
-    .settings(buildSettings: _*)
+    .settings(commonSettings: _*)
     .settings(releaseSettings: _*)
-//    .settings(playScalaSettings : _*)
     .settings(
       resolvers ++= QBRepositories,
       libraryDependencies ++= Dependencies.sample
