@@ -1,21 +1,18 @@
 package controllers
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import play.api.mvc.{Request, SimpleResult, Action, Controller}
-import play.api.libs.json._
-import play.modules.reactivemongo.MongoController
-import org.qbproject.api.controllers.{QBCrudController, QBAPIController}
-import org.qbproject.api.mongo.{QBCollectionValidation, QBMongoCollection}
-import org.qbproject.schema.QBSchema
-import QBSchema._
-import org.qbproject.api.routing.QBRouterUtil.namespace
-import org.qbproject.api.routing.{QBRouter, QBRoute}
-import org.qbproject.api.routing.QBRoutes._
 import org.joda.time.DateTime
-import org.qbproject.api.mongo.MongoSchemaExtensions._
+import org.qbproject.mongo._
+import org.qbproject.controllers._
+import org.qbproject.routing._
+import org.qbproject.schema.QBSchema._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
+import play.api.mvc.{Action, Controller, Request, SimpleResult}
+import play.modules.reactivemongo.MongoController
 
-object BlogController extends Controller with MongoController with QBCrudController {
+import scala.concurrent.Future
+
+object BlogController extends Controller with MongoController with QBCrudController with QBRouter {
 
   val blogSchema = qbClass(
     "id" -> objectId,
@@ -35,14 +32,16 @@ object BlogController extends Controller with MongoController with QBCrudControl
 
   override def createSchema = blogSchema -- ("id", "creationDate")
 
-  def createBlogPost = ValidatingAction(blogSchema -- ("id", "creationDate")).async {
-    request =>
-      collection.collection.insert(request.validatedJson).map {
-        error =>
-          if (error.ok) Ok("Blog entry created")
-          else BadRequest(error.message)
-      }
-  }
+  override def updateSchema = createSchema
+
+//  def createBlogPost = ValidatingAction(blogSchema -- ("id", "creationDate")).async {
+//    request =>
+//      collection.collection.insert(request.validatedJson).map {
+//        error =>
+//          if (error.ok) Ok("Blog entry created")
+//          else BadRequest(error.message)
+//      }
+//  }
 
   def getBlogPostById(blogId: String) = Action.async {
     collection.getById(blogId).map(blog => Ok(Json.toJson(blog.get)))
@@ -53,12 +52,11 @@ object BlogController extends Controller with MongoController with QBCrudControl
   }
 
   override def beforeCreate(blog: JsValue): JsValue =
-   blog.asInstanceOf[JsObject] + ("creationDate" -> JsString(new DateTime().toString()))
+   blog.asInstanceOf[JsObject] + ("creationDate" -> JsString(new DateTime().toString))
 
   // Routes :
 
-  val createBlogPostRoute: QBRoute = POST / root -> createBlogPost
-  val routes = List(createBlogPostRoute) ++ crudRoutes
+  override val qbRoutes = crudRoutes
 
 }
 case class BlogAuth[A](action: Action[A]) extends Action[A] {
@@ -81,16 +79,16 @@ case class FooAction[A](action: Action[A]) extends Action[A] {
   lazy val parser = action.parser
 }
 
-object BlogRouter extends QBRouter {
-
-  val getAllRoute =  GET / "all2" -> BlogController.getAllBlogEntries
-  val createRoute = POST / "create2" -> BlogController.createBlogPost
-
-  override def wrappers = Map(
-    createRoute wrapWith (BlogAuth(_)),
-    BlogController.routes wrapWith (FooAction(_)))
-
-
-  override def qbRoutes = List(createRoute, getAllRoute) ++ namespace("/api") { BlogController.routes }
-
-}
+//object BlogRouter extends QBRouter {
+//
+//  val getAllRoute =  GET / "all2" -> BlogController.getAllBlogEntries
+//  val createRoute = POST / "create2" -> BlogController.create
+//
+//  override def wrappers = Map(
+//    createRoute wrapWith (BlogAuth(_)),
+//    BlogController.routes wrapWith (FooAction(_)))
+//
+//
+//  override def qbRoutes = getAllRoute. List(createRoute).wr, getAllRoute) ++ namespace("/api") { BlogController.routes }
+//
+//}
