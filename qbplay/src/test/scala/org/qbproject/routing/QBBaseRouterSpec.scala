@@ -80,11 +80,12 @@ class QBBaseRouterSpec extends PlaySpecification {
     def twoString(str1: String, str2: String) = Action { Ok(str1 + " " + str2) }
 
     val sayHello = GET / "sayHello" / string to echo
+    val echoPOST = POST / string to echo
     val numberRoute = GET / "echonr" / int to number
     val bothRoute = GET / "both" / int / string to echoBoth
     val twoStringRoute = GET / "one" / string / "two" / string to twoString
 
-    val allRoutes = List(numberRoute, sayHello, bothRoute, twoStringRoute)
+    val allRoutes = List(numberRoute, sayHello, echoPOST, bothRoute, twoStringRoute)
     
     val FakeAppWithRouter = new FakeApplication {
       override lazy val routes: Option[Router.Routes] =
@@ -96,6 +97,11 @@ class QBBaseRouterSpec extends PlaySpecification {
 
     "resolve route with dynamic string part" in new WithApplication(DynamicTestController.FakeAppWithRouter) {
       val result = route(FakeRequest(GET, "/sayHello/World"))
+      result.map(contentAsString) must beSome("World")
+    }
+
+    "resolve route with singleton dynamic string part" in new WithApplication(DynamicTestController.FakeAppWithRouter) {
+      val result = route(FakeRequest(POST, "/World"))
       result.map(contentAsString) must beSome("World")
     }
 

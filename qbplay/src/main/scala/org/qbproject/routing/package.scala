@@ -24,8 +24,8 @@ package object routing extends QBRouteWrapping {
    * Router DSL. Start for the route builder `GET / "something"
    */
   implicit def stringToMethod(methodName: String): MethodMatcher = new MethodMatcher(methodName)
-  implicit def stringToRouteBuilder(method: String)(implicit collector: RouteCollector = VoidCollector) = new Builder0(stringToMethod(method), "", collector)
-  implicit def methodToRouteBuilder(method: MethodMatcher)(implicit collector: RouteCollector = VoidCollector) = new Builder0(method, "", collector)
+  implicit def stringToRouteBuilder(method: String)(implicit collector: RouteCollector = VoidCollector) = new Builder0(stringToMethod(method), "/", collector)
+  implicit def methodToRouteBuilder(method: MethodMatcher)(implicit collector: RouteCollector = VoidCollector) = new Builder0(method, "/", collector)
 
   /**
    * Prefixes all given path with the given prefix.
