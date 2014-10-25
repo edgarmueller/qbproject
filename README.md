@@ -117,9 +117,9 @@ For a tutorial on how to get started please see the [qb homepage](http://qb-proj
 "QB repository" at "http://dl.bintray.com/qbproject/maven"
 
 // Add these dependencies
-val qbSchema        = "org.qbproject"    %% "qbschema"    % "0.4-rc6"
-val qbPlay          = "org.qbproject"    %% "qbplay"      % "0.4-rc6"
-val qbCSV           = "org.qbproject"    %% "qbcsv"       % "0.4-rc6"
+val qbSchema        = "org.qbproject"    %% "qbschema"    % "0.4.0-rc6"
+val qbPlay          = "org.qbproject"    %% "qbplay"      % "0.4.0-rc6"
+val qbCSV           = "org.qbproject"    %% "qbcsv"       % "0.4.0-rc6"
 ```
 
 ### Contribute
