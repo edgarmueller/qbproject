@@ -57,6 +57,10 @@ object Dependencies {
     specs2
   )
 
+  val qbForms = List(
+
+  )
+
   val sample = List(
     scalaz,
     specs2
@@ -66,10 +70,10 @@ object Dependencies {
 object QBBuild extends Build {
 
   val QBRepositories = Seq(
-    "Typesafe repository"     at "http://repo.typesafe.com/typesafe/releases/",
-    "mandubian maven bintray" at "http://dl.bintray.com/mandubian/maven",
-    "Sonatype OSS Snapshots"  at "https://oss.sonatype.org/content/repositories/snapshots",
-    "Sonatype OSS Releases"  at "https://oss.sonatype.org/content/repositories/releases",
+    "Typesafe repository"           at "http://repo.typesafe.com/typesafe/releases/",
+    "mandubian maven bintray"       at "http://dl.bintray.com/mandubian/maven",
+    "Sonatype OSS Snapshots"        at "https://oss.sonatype.org/content/repositories/snapshots",
+    "Sonatype OSS Releases"         at "https://oss.sonatype.org/content/repositories/releases",
     "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/tree/master/releases"
   )
 
@@ -140,16 +144,25 @@ object QBBuild extends Build {
       libraryDependencies ++= Dependencies.qbCsv
     ).dependsOn(schemaProject)
 
-  lazy val playSampleProject = Project("qbplay-sample", file("qbplay-sample"))
+  lazy val qbForms = Project("qbforms", file("qbforms"))
     .enablePlugins(play.PlayScala)
     .settings(commonSettings: _*)
     .settings(releaseSettings: _*)
     .settings(
       resolvers ++= QBRepositories,
+      retrieveManaged := true,
+      libraryDependencies ++= Dependencies.qbForms
+    ).dependsOn(schemaProject, playProject)
+
+  lazy val playSampleProject =  Project("qbplay-sample", file("qbplay-sample"))
+    .enablePlugins(play.PlayScala)
+    .settings(releaseSettings: _*)
+    .settings(commonSettings: _*)
+    .settings(
+      resolvers ++= QBRepositories,
       libraryDependencies ++= Dependencies.sample
-    )
-    .dependsOn(schemaProject,playProject)
-    .aggregate(schemaProject,playProject)
+    ).dependsOn(schemaProject,playProject,qbForms)
+    .aggregate(schemaProject,playProject,qbForms)
 
 
 

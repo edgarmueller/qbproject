@@ -54,7 +54,6 @@ object BlogController extends Controller with MongoController with QBCrudControl
   override def beforeCreate(blog: JsValue): JsValue =
    blog.asInstanceOf[JsObject] + ("creationDate" -> JsString(new DateTime().toString))
 
-  // Routes :
 
   override val qbRoutes = crudRoutes
 
