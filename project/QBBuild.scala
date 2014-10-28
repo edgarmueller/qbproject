@@ -1,3 +1,4 @@
+import play.PlayImport.PlayKeys
 import sbt._
 import sbt.Keys._
 import com.typesafe.sbteclipse.plugin.EclipsePlugin._
@@ -144,6 +145,7 @@ object QBBuild extends Build {
       libraryDependencies ++= Dependencies.qbCsv
     ).dependsOn(schemaProject)
 
+  /** TODO: assets.jar has been published manually, can we do better? **/
   lazy val qbForms = Project("qbforms", file("qbforms"))
     .enablePlugins(play.PlayScala)
     .settings(commonSettings: _*)
@@ -151,6 +153,7 @@ object QBBuild extends Build {
     .settings(
       resolvers ++= QBRepositories,
       retrieveManaged := true,
+      PlayKeys.generateRefReverseRouter := false,
       libraryDependencies ++= Dependencies.qbForms
     ).dependsOn(schemaProject, playProject)
 
