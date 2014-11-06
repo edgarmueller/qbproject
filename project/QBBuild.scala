@@ -15,16 +15,22 @@ object Version {
   val scalaz        = "7.0.6"
   val scalameter    = "0.6"
   val specs2        = "2.3.12"
+  val spray         = "1.3.2"
+  val akka          = "2.3.6"
 }
 
 object Library {
 
   val jsonZipper    = "com.mandubian"     %% "play-json-zipper"    % Version.jsonZipper
   val openCsv       = "net.sf.opencsv"    %  "opencsv"             % Version.openCsv
-  val play          = "com.typesafe.play" %% "play"                % Version.play
-  val playJson      = "com.typesafe.play" %% "play-json"           % Version.play
+  val sprayCan      = "io.spray"          %% "spray-can"           % Version.spray
+  val sprayHttp     = "io.spray"          %% "spray-http"          % Version.spray
+  val sprayRouting  = "io.spray"          %% "spray-routing"       % Version.spray
   val reactiveMongo = "org.reactivemongo" %% "play2-reactivemongo" % Version.reactiveMongo
   val scalaz        = "org.scalaz"        %% "scalaz-core"         % Version.scalaz
+  val akkaActor     = "com.typesafe.akka" %% "akka-actor"          % Version.akka
+  val play          = "com.typesafe.play" %% "play"                % Version.play
+  val playJson      = "com.typesafe.play" %% "play-json"           % Version.play
   val playTest      = "com.typesafe.play" %% "play-test"           % Version.play           % "test"
   val scalameter    = "com.storm-enroute" %% "scalameter"          % Version.scalameter     % "test"
   val specs2        = "org.specs2"        %% "specs2"              % Version.specs2         % "test"
@@ -60,6 +66,15 @@ object Dependencies {
 
   val qbForms = List(
 
+  )
+
+  val akkaSample = List(
+    playJson,
+    sprayCan,
+    sprayHttp,
+    sprayRouting,
+    akkaActor,
+    reactiveMongo
   )
 
   val sample = List(
@@ -167,6 +182,16 @@ object QBBuild extends Build {
     ).dependsOn(schemaProject,playProject,qbForms)
     .aggregate(schemaProject,playProject,qbForms)
 
+  // TODO: extract mongo wrapper into own bundle to avoid dependency to qbPlay
+  lazy val akkaSampleProject =  Project("qbakka-sample", file("qbakka-sample"))
+    .settings(releaseSettings: _*)
+    .settings(commonSettings: _*)
+    .settings(
+      resolvers ++= QBRepositories,
+      libraryDependencies ++= Dependencies.akkaSample,
+      mainClass in Compile := Some("org.qbproject.sample.akka.Boot")
+    ).dependsOn(schemaProject, playProject)
+    .aggregate(schemaProject, playProject)
 
 
 
