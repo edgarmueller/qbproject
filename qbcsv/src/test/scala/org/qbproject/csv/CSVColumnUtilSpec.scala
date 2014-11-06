@@ -112,7 +112,7 @@ class CSVColumnUtilSpec extends Specification {
         2;Otto;otto@qb.org;26;ginger;"""
       val result = parse(testSchema, testData)
       result.size must beEqualTo(2)
-      QBValidator.validateJsValue(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
+      QBValidator.validate(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
         "id" -> "1",
         "name" -> "Eddy",
         "email" -> "eddy@qb.org",
@@ -135,7 +135,7 @@ class CSVColumnUtilSpec extends Specification {
         2;Otto;otto@qb.org;26;ginger;"""
       val result = parse(testSchema, testData)
       result.size must beEqualTo(2)
-      QBValidator.validateJsValue(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
+      QBValidator.validate(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
         "id" -> "1",
         "name" -> "Eddy",
         "email" -> "eddy@qb.org",
@@ -154,10 +154,10 @@ class CSVColumnUtilSpec extends Specification {
         2;foo"""
       val result = parse(testSchema, testData)
       result.size must beEqualTo(2)
-      QBValidator.validateJsValue(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
+      QBValidator.validate(testSchema)(result(0).get.get).get must beEqualTo(Json.obj(
         "id" -> "1"
       ))
-      QBValidator.validateJsValue(testSchema)(result(1).get.get).get must beEqualTo(Json.obj(
+      QBValidator.validate(testSchema)(result(1).get.get).get must beEqualTo(Json.obj(
         "id" -> "2",
         "enum" -> "foo"
       ))
