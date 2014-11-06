@@ -13,7 +13,7 @@ trait QBAPIController extends Controller {
     def invokeBlock[A](request: Request[A], block: (ValidatedJsonRequest[A]) => Future[SimpleResult]) = {
       extractJsonFromRequest(request).fold(noJsonResponse)(json => {
         val updatedJson = beforeValidate(json)
-        validator.validateJsValue(schema)(updatedJson) match {
+        validator.validate(schema)(updatedJson) match {
           case JsSuccess(validatedJson, path) => block(new ValidatedJsonRequest(updatedJson, schema, request))
           case error: JsError => jsonInvalidResponse(error)
         }

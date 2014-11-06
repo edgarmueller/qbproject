@@ -21,11 +21,9 @@ trait QBValidator extends JsDefaultValueProcessor {
 
   val validationInstance = JsValidationVisitor()
 
-  def validateJsValue(schema: QBType)(input: JsValue): JsResult[JsValue] =
-    process(schema, QBPath(), input)(validationInstance)
+  def validate[J <: JsValue](schema: QBType)(input: J): JsResult[J] =
+    process(schema, QBPath(), input)(validationInstance).asInstanceOf[JsResult[J]]
 
-  def validate(schema: QBClass)(input: JsObject): JsResult[JsObject] =
-    process(schema, QBPath(), input)(validationInstance).asInstanceOf[JsResult[JsObject]]
 }
 
 trait PartialValidator { self: QBValidator =>
