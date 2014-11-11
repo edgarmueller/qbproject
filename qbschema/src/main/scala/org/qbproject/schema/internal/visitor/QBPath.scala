@@ -6,7 +6,9 @@ import play.api.libs.json.JsPath
  *
  */
 trait PathNode
-case class QBKeyPathNode(s: String) extends PathNode
+case class QBKeyPathNode(s: String) extends PathNode {
+  override def toString = s
+}
 case class QBIdxNode(idx: Int) extends PathNode
 
 /**
@@ -19,7 +21,7 @@ case class QBIdxNode(idx: Int) extends PathNode
  */
 case class QBPath(paths: List[PathNode] = List.empty) {
 
-  def append(path: PathNode): QBPath = {
+  def :+(path: PathNode): QBPath = {
     QBPath(path :: paths)
   }
 

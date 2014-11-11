@@ -4,11 +4,11 @@ import play.api.mvc.Action
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits._
 import org.qbproject.routing._
-import org.qbproject.mongo.{ QBCollectionValidation, QBMongoCollection }
+import org.qbproject.mongo.{QBAdaptedMongoCollection, QBMongoCollection}
 
 trait QBCrudController extends QBAPIController { self =>
 
-  def collection: QBMongoCollection with QBCollectionValidation
+  def collection: QBAdaptedMongoCollection
 
   // TODO: avoid recalc
   def createSchema = collection.schema
@@ -16,7 +16,7 @@ trait QBCrudController extends QBAPIController { self =>
 
   // Routes --
   def getAllRoute       =  GET   / ?                  to getAll
-  def getByIdRoute      = GET   / string             to getById
+  def getByIdRoute      =  GET   / string             to getById
   def createRoute       =  POST  / ?                  to create
   def updateRoute       =  POST  / string             to update
   def deleteByPostRoute =  POST  / "delete" / string  to delete
@@ -35,7 +35,7 @@ trait QBCrudController extends QBAPIController { self =>
 
   def getAll = JsonHeaders {
     Action.async {
-      collection.getAll().map { result =>
+      collection.all().map { result =>
         Ok(Json.toJson(result))
       }
     }
@@ -43,7 +43,7 @@ trait QBCrudController extends QBAPIController { self =>
 
   def getById(id: String) = JsonHeaders {
     Action.async {
-      collection.getById(id).map {
+      collection.findById(id).map {
         case Some(result) => Ok(Json.toJson(result))
         case _ => NotFound(":(")
       }
@@ -52,7 +52,7 @@ trait QBCrudController extends QBAPIController { self =>
 
   def count = JsonHeaders {
     Action.async {
-      collection.getCount.map { result =>
+      collection.count.map { result =>
         Ok(Json.toJson(Json.obj("count" -> result)))
       }
     }

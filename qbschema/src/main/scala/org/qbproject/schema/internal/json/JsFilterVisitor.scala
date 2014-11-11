@@ -1,4 +1,4 @@
-package org.qbproject.schema.internal.json.mapper
+package org.qbproject.schema.internal.json
 
 import org.qbproject.schema.internal.visitor._
 import org.qbproject.schema.{QBArray, QBClass, QBPrimitiveType, QBType}
@@ -9,7 +9,7 @@ import play.api.libs.json._
  *
  * The matcher must be implemented by clients.
  */
-object JsValueUpdateVisitor {
+object JsFilterVisitor {
 
   def apply(matcher: QBType => Boolean) = new Visitor[Seq[(QBType, QBPath)]] {
 
@@ -22,22 +22,22 @@ object JsValueUpdateVisitor {
       }
     }
 
-    def atArray(schema: QBArray, elements: Seq[Seq[(QBType, QBPath)]], path: QBPath,
+    def atArray(schema: QBArray, elements: List[Seq[(QBType, QBPath)]], path: QBPath,
                 jsArray: JsArray): JsResult[Seq[(QBType, QBPath)]] = {
-      JsSuccess(if (matcher(schema.items)) {
-        List.fill(elements.size)(path)
+      if (matcher(schema.items)) {
+        JsSuccess(List.fill(elements.size)(path)
           .zipWithIndex
-          .map { case (p, idx) => p.append(QBIdxNode(idx)) }
-          .map(idxPath => (schema.items, idxPath))// ++ elements.flatten
+          .map { case (p, idx) => p :+ QBIdxNode(idx) }
+          .map(idxPath => (schema.items, idxPath)))
       } else {
-        elements.flatten
-      })
+        JsSuccess(elements.flatten)
+      }
     }
 
-    def atObject(schema: QBClass, fields: Seq[(String, Seq[(QBType, QBPath)])], path: QBPath,
+    def atObject(schema: QBClass, fields: List[(String, Seq[(QBType, QBPath)])], path: QBPath,
                  jsObject: JsObject): JsResult[Seq[(QBType, QBPath)]] = {
       if (matcher(schema)) {
-        JsSuccess(List(schema -> path) ++ fields.flatMap(_._2))
+        JsSuccess(schema -> path :: fields.flatMap(_._2))
       } else {
         JsSuccess(fields.flatMap(_._2))
       }

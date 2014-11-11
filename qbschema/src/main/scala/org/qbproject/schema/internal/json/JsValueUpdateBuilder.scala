@@ -1,4 +1,4 @@
-package org.qbproject.schema.internal.json.mapper
+package org.qbproject.schema.internal.json
 
 import org.qbproject.schema.QBType
 import org.qbproject.schema.internal.visitor._
@@ -15,8 +15,11 @@ import scala.reflect.ClassTag
  * @param schema
  *               a QB schema
  */
-class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty)
-  extends JsValueProcessor {
+case class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, PartialFunction[JsValue, JsValue])] = List.empty) {
+
+  val processor = new JsValueProcessor() {
+    override def ignoreMissingFields = true
+  }
 
   /**
    * Allows to created a modified version of the passed JsObject by passing in
@@ -69,12 +72,6 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
 
   private def getByType(qbType: QBType) = mappings.find(_._1(qbType))
 
-  /**
-   * @inheritdoc
-   *
-   * @return true, if missing fields should be ignored, false otherwise
-   */
-  override def ignoreMissingFields = true
 
   /**
    * Returns all matched paths together with their QB type.
@@ -84,8 +81,8 @@ class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolean, Pa
    * @return a Seq containing tuples of the matched type and its JsPath
    */
   def matchedPaths(input: JsValue): Seq[(QBType, JsPath)] = {
-    process(schema, QBPath(), input)(JsValueUpdateVisitor(matcher)).getOrElse(List.empty).map(pair =>
-      pair._1 -> pair._2.toJsPath)
+    processor.process(schema, QBPath(), input)(JsFilterVisitor(matcher))
+             .getOrElse(List.empty).map(pair => pair._1 -> pair._2.toJsPath)
   }
 
   /**

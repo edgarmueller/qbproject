@@ -14,7 +14,7 @@ object Version {
   val reactiveMongo = "0.10.5.akka23-SNAPSHOT"
   val scalaz        = "7.0.6"
   val scalameter    = "0.6"
-  val specs2        = "2.3.12"
+  val specs2        = "2.3.13"
   val spray         = "1.3.2"
   val akka          = "2.3.6"
 }
@@ -52,8 +52,14 @@ object Dependencies {
     play,
     playTest,
     jsonZipper,
-    reactiveMongo,
     scalameter,
+    specs2
+  )
+
+  val qbMongo = List(
+    playJson,
+    reactiveMongo,
+    scalaz,
     specs2
   )
 
@@ -129,7 +135,7 @@ object QBBuild extends Build {
       unmanagedSourceDirectories in Test    <+= baseDirectory(new File(_, "src/test/scala")),
       retrieveManaged := true
     )
-    .aggregate(schemaProject, playProject, csvProject)
+    .aggregate(schemaProject, mongoProject, playProject, csvProject)
 
   lazy val schemaProject = Project("qbschema", file("qbschema"))
     .settings(buildSettings: _*)
@@ -141,6 +147,15 @@ object QBBuild extends Build {
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     )
 
+  lazy val mongoProject = Project("qbmongo", file("qbmongo"))
+    .settings(buildSettings: _*)
+    .settings(releaseSettings: _*)
+    .settings(
+      resolvers ++= QBRepositories,
+      retrieveManaged := true,
+      libraryDependencies ++= Dependencies.qbMongo
+    ).dependsOn(schemaProject)
+
   lazy val playProject = Project("qbplay", file("qbplay"))
     .settings(buildSettings: _*)
     .settings(releaseSettings: _*)
@@ -149,7 +164,8 @@ object QBBuild extends Build {
       retrieveManaged := true,
       libraryDependencies ++= Dependencies.qbPlay,
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
-    ).dependsOn(schemaProject)
+    ).dependsOn(schemaProject, mongoProject)
+
 
   lazy val csvProject = Project("qbcsv", file("qbcsv"))
     .settings(buildSettings: _*)

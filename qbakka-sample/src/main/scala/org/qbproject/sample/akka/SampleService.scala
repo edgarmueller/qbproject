@@ -1,7 +1,7 @@
 package org.qbproject.sample.akka
 
 import akka.actor.Actor
-import org.qbproject.mongo.{QBCollectionValidation, QBMongoCollection, _}
+import org.qbproject.mongo._
 import org.qbproject.schema.QBSchema._
 import org.qbproject.schema.QBValidator
 import play.api.libs.json.{JsError, JsObject, Json}
@@ -34,11 +34,7 @@ trait SampleService extends HttpService {
   // Gets a reference to the database "plugin"
   val db = connection("persons")
 
-  def collection: QBCollectionValidation =
-    new QBMongoCollection("persons-coll")(db) with QBCollectionValidation {
-      override def schema = personSchema
-
-    }
+  def collection: QBAdaptedMongoCollection = QBMongoDefaultCollection("person-coll", db, personSchema)
 
   lazy val myRoute =
     path("person") {
@@ -69,11 +65,11 @@ trait SampleService extends HttpService {
 
   protected lazy val getRoute = parameters('id.as[String]) { id ⇒
         complete {
-          collection.getById(id)
+          collection.findById(id)
         }
       } ~
         complete {
-          collection.getAll()
+          collection.all()
       }
 
   protected lazy val deleteRoute = parameters('id.as[String]) { id =>

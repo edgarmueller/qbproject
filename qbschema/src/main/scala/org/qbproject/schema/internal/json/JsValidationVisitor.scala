@@ -46,7 +46,7 @@ object JsValidationVisitor {
      *               the matched array
      * @return a JsResult containing a JsArray
      */
-    def atArray(schema: QBArray, elements: Seq[JsValue], path: QBPath, jsArray: JsArray): JsResult[JsArray] = {
+    def atArray(schema: QBArray, elements: List[JsValue], path: QBPath, jsArray: JsArray): JsResult[JsArray] = {
       val arr = JsArray(elements.toList)
       schema.validate(arr) match {
         case Success(s) => JsSuccess(s)
@@ -67,7 +67,7 @@ object JsValidationVisitor {
      *             the matched object
      * @return a JsResult containing a JsObject
      */
-    def atObject(schema: QBClass, fields: Seq[(String, JsValue)], path: QBPath, jsObject: JsObject): JsResult[JsObject] = {
+    def atObject(schema: QBClass, fields: List[(String, JsValue)], path: QBPath, jsObject: JsObject): JsResult[JsObject] = {
       val obj = JsObject(fields.toList)
       schema.validate(obj) match {
         case Success(s) => JsSuccess(s)

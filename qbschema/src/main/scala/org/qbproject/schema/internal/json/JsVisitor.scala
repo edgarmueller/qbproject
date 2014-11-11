@@ -38,7 +38,7 @@ trait JsVisitor extends Visitor[JsValue] {
    *               the matched array
    * @return a JsResult containing a JsArray
    */
-  def atArray(schema: QBArray, elements: Seq[JsValue], path: QBPath, jsArray: JsArray): JsResult[JsArray]
+  def atArray(schema: QBArray, elements: List[JsValue], path: QBPath, jsArray: JsArray): JsResult[JsArray]
 
   /**
    * Called when the visitor encounters an object.
@@ -53,5 +53,5 @@ trait JsVisitor extends Visitor[JsValue] {
    *             the matched object
    * @return a JsResult containing a JsObject
    */
-  def atObject(schema: QBClass, fields: Seq[(String, JsValue)], path: QBPath, jsObject: JsObject): JsResult[JsObject]
+  def atObject(schema: QBClass, fields: List[(String, JsValue)], path: QBPath, jsObject: JsObject): JsResult[JsObject]
 }

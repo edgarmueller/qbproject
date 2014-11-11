@@ -1,28 +1,23 @@
 package org.qbproject.mongo
 
-import reactivemongo.api._
-import reactivemongo.bson._
-import reactivemongo.core.commands._
-
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.json.ImplicitBSONHandlers._
+import reactivemongo.api.{QueryOpts, DB}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.core.commands.{FindAndModify, Update, Count}
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
-
-class QBMongoCollection(collectionName: String)(db: DB) {
-
-  type ID = String
+class QBMongoCollection(collectionName: String)(db: DB) extends QBMongoCollectionInterface {
 
   private lazy val collection: JSONCollection = db.collection[JSONCollection](collectionName)
   
   /** Perform a raw command on the underlying mongocollection */
   def rawCollection = collection
 
-  def getCount = db.command(Count(collectionName))
+  def count = db.command(Count(collectionName))
 
-  def getAll(skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = find(Json.obj(), skip, limit)
+  def all(skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = find(Json.obj(), skip, limit)
 
   def findOne(query: JsObject): Future[Option[JsObject]] = {
     collection.find(query)
@@ -51,7 +46,7 @@ class QBMongoCollection(collectionName: String)(db: DB) {
     )).map(_.map(bsonToJson))
   }
 
-  def getById(id: ID): Future[Option[JsObject]] = {
+  def findById(id: ID): Future[Option[JsObject]] = {
     collection.find(Json.obj("_id" -> Json.obj("$oid" -> id))).cursor[JsObject].headOption
   }
 
@@ -72,8 +67,7 @@ class QBMongoCollection(collectionName: String)(db: DB) {
       ))
       case _ => obj
     }
-    //    println(Json.prettyPrint(toCreate))
-    collection.insert(toCreate).map(lastError => 
+    collection.insert(toCreate).map(lastError =>
       if (lastError.ok) toCreate 
       else throw new RuntimeException("oh noes."))
   }
@@ -103,6 +97,8 @@ class QBMongoCollection(collectionName: String)(db: DB) {
 
 
   // ---
+
+  import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
   implicit def jsonToBson(obj: JsObject): BSONDocument = JsObjectWriter.write(obj)
   implicit def bsonToJson(obj: BSONDocument): JsObject = JsObjectReader.read(obj)

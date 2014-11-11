@@ -23,12 +23,7 @@ object BlogController extends Controller with MongoController with QBCrudControl
     "creationDate" -> qbDateTime)
 
   //
-  lazy val collection = new QBMongoCollection("blog")(db) with QBCollectionValidation {
-    /**
-     * TODO: MUST be def!
-     */
-    override def schema = blogSchema
-  }
+  lazy val collection = QBMongoDefaultCollection("blog", db, blogSchema)
 
   override def createSchema = blogSchema -- ("id", "creationDate")
 
@@ -44,11 +39,11 @@ object BlogController extends Controller with MongoController with QBCrudControl
 //  }
 
   def getBlogPostById(blogId: String) = Action.async {
-    collection.getById(blogId).map(blog => Ok(Json.toJson(blog.get)))
+    collection.findById(blogId).map(blog => Ok(Json.toJson(blog.get)))
   }
 
   def getAllBlogEntries = Action.async {
-    collection.getAll().map(Json.toJson(_)).map(Ok(_))
+    collection.all().map(Json.toJson(_)).map(Ok(_))
   }
 
   override def beforeCreate(blog: JsValue): JsValue =

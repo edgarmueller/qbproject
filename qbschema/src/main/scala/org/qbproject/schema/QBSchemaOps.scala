@@ -1,6 +1,7 @@
 package org.qbproject.schema
 
 import org.qbproject.schema.internal._
+import play.api.libs.json.{JsValue, JsObject}
 import scala.reflect.ClassTag
 import scalaz._
 
@@ -302,6 +303,8 @@ class QBSchemaOps extends QBBaseSchemaOps { self =>
 
     def update(qbType: QBType, pf: PartialFunction[QBType, QBType]) =
       self.updateIf(qbType, pf)
+
+    def transform(obj: JsObject)(transformers: (QBType => Boolean, PartialFunction[JsValue, JsValue])*): JsObject = self.transform(schema, obj)(transformers)
 
     /**
      * Checks if a given predicate holds for all attributes.

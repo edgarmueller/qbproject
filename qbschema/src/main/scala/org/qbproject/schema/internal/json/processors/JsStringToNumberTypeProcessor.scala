@@ -10,7 +10,7 @@ import org.qbproject.schema.{QBInteger, QBNumber, QBType}
 /**
  * Type  processor that allow strings to be treated as numbers, if they are parseable according to the schema.
  */
-class JsStringToNumberTypeProcessor extends TypeProcessor {
+case object JsStringToNumberTypeProcessor extends TypeProcessor {
 
   //TODO generalize and remove duplicate code
   /**

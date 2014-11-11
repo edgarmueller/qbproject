@@ -5,6 +5,9 @@ import java.util.regex.Pattern
 import org.qbproject.schema._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
+import reactivemongo.api.DB
+import scalaz._
+import Scalaz._
 
 import scalaz.{Failure, Success, Validation}
 
@@ -31,25 +34,30 @@ package object mongo {
 
   def objectId(endpoint: String) = new QBObjectId(Set(ObjectIdRule, new KeyValueRule("endpoint", endpoint)))
 
-  def read(schema: QBClass)(instance: JsObject): JsResult[JsObject] = {
-    new MongoTransformer(schema).fromMongoJson(instance)
+  object QBMongoDefaultCollection {
+
+    def apply(collectionName: String, db: DB, schema: QBClass): QBAdaptedMongoCollection = {
+
+      val conversionBuilder = (MongoIdConversion.apply |@| DefaultMongoConversion.apply) { _ compose _}
+
+      new QBAdaptedMongoCollection(new QBMongoCollection(collectionName)(db),
+        schema,
+        conversionBuilder(schema))
+    }
   }
 
-  def write(schema: QBClass)(instance: JsObject): JsResult[JsObject] = {
-    new MongoTransformer(schema).toMongoJson(instance)
-  }
-
-  object toMongoId extends (JsObject => JsObject) {
-    override def apply(jsObject: JsObject): JsObject = JsObject(jsObject.fields.map {
+  object toMongoId extends (JsObject => JsResult[JsObject]) {
+    override def apply(jsObject: JsObject): JsResult[JsObject]= JsSuccess(JsObject(jsObject.fields.map {
       case ("id", value) => ("_id", value)
       case fd => fd
-    })
+    }))
   }
 
-  object fromMongoId extends (JsObject => JsObject) {
-    override def apply(jsObject: JsObject): JsObject = JsObject(jsObject.fields.map {
-      case ("_id", value) => ("id", value)
-      case fd => fd
-    })
-  }
+  object fromMongoId extends (JsObject => JsResult[JsObject]) {
+    override def apply(jsObject: JsObject): JsResult[JsObject] = JsSuccess(
+      JsObject(jsObject.fields.map {
+        case ("_id", value) => ("id", value)
+        case fd => fd
+      }))
+    }
 }
