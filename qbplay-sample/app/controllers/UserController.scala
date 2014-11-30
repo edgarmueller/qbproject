@@ -1,6 +1,7 @@
 package controllers
 
 import org.qbproject.controllers._
+import org.qbproject.mongo.{QBMongoDefaultCollection, QBMongoCollectionInterface}
 import org.qbproject.mongo._
 import org.qbproject.routing._
 import org.qbproject.schema.QBSchema._
@@ -13,10 +14,8 @@ import play.modules.reactivemongo.MongoController
 object UserController extends MongoController
   with QBCrudController with QBRouter {
 
-  override def collection: QBCollectionValidation =
-    new QBMongoCollection("users")(db) with QBCollectionValidation {
-      override def schema = UserSchema.user
-    }
+  override def collection: QBAdaptedMongoCollection =
+    QBMongoDefaultCollection("users", db, UserSchema.user)
 
   override def qbRoutes = UserController.crudRoutes
 

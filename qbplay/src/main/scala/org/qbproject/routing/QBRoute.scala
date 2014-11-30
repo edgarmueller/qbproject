@@ -42,7 +42,7 @@ trait QBRoute {
 
   /**
    * Returns the documentation for Play's routing page and other uses.
-   * Format is `GET   /path    comment/controller
+   * Format is GET   /path    comment/controller
    */
   def documentation: (String, String, String) = ("", path, "")
 

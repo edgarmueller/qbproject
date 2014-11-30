@@ -1,11 +1,9 @@
 package org.qbproject.mongo
 
-import org.specs2.mutable.Specification
 import org.qbproject.schema._
-import org.qbproject.schema.{ValidationRule, QBStringImpl, QBJsValueUpdater}
 import org.qbproject.schema.QBSchema._
+import org.specs2.mutable.Specification
 import play.api.libs.json._
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 object SchemaExtensionSpec extends Specification {
 
@@ -17,9 +15,11 @@ object SchemaExtensionSpec extends Specification {
       val schema = qbClass("img" -> image)
       val instance = Json.obj("img" -> "otto.png")
 
-      QBJsValueUpdater[QBImage]().update(schema)(instance) {
-        case JsString(path) => JsString("public/images/" + path)
-      }.get must beEqualTo(Json.obj("img" -> "public/images/otto.png"))
+      val isQBImage = (qbType: QBType) => qbType.isInstanceOf[QBImage]
+
+      schema.transform(instance)(
+        isQBImage -> { case JsString(path) => JsString("public/images/" + path) }
+      ) must beEqualTo(Json.obj("img" -> "public/images/otto.png"))
     }
   }
 }

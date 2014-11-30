@@ -1,5 +1,6 @@
 package org.qbproject.schema.internal
 
+import org.qbproject.schema.internal.json.JsValueUpdateBuilder
 import play.api.libs.json._
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
@@ -45,14 +46,17 @@ trait QBBaseSchemaOps {
   // Core methods --
 
   /**
-   * 
+   * Returns the attribute with the given attribute name from the given class description.
    * 
    * @param cls
-   * @param fieldName
-   * @return
+   *          the class description
+   * @param attributeName
+   *          the attribute name
+   * @return the attribute that matches the given attribute. If the attribute does not exists
+   *         a RuntimeException is thrown
    */
-  def attribute(cls: QBClass, fieldName: String): QBAttribute = {
-    cls.attributes.find(_.name == fieldName).getOrElse(fail("field.does.not.exist [" + fieldName + "]"))
+  def attribute(cls: QBClass, attributeName: String): QBAttribute = {
+    cls.attributes.find(_.name == attributeName).getOrElse(fail("field.does.not.exist [" + attributeName + "]"))
   }
 
   /**
@@ -216,16 +220,22 @@ trait QBBaseSchemaOps {
    *
    * @return the derived JSON vlaue
    */
-  def adaptSchema(schema: QBType, path: JsPath, adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] = {
+  def adapt(schema: QBType, path: JsPath, adapter: (JsPath, QBType) => JsResult[JsValue]): JsResult[JsValue] = {
     schema match {
       case obj: QBClass =>
-        val fields = obj.attributes.map(fd => fd.name -> adaptSchema(fd.qbType, path \ fd.name, adapter))
+        val fields = obj.attributes.map(fd => fd.name -> adapt(fd.qbType, path \ fd.name, adapter))
           JsSuccess(JsObject(fields.collect {
             case (fieldName, JsSuccess(res, _)) if !res.isInstanceOf[JsUndefined] =>
               (fieldName, res)
           }))
       case q => adapter(path, q)
     }
+  }
+
+  def transform(schema: QBClass, obj: JsObject)(transformers: Seq[(QBType => Boolean, PartialFunction[JsValue, JsValue])]): JsObject = {
+    transformers.foldLeft(new JsValueUpdateBuilder(schema))((builder, entry) =>
+      builder.byPredicate(entry._1)(entry._2)
+    ).go(obj)
   }
 
   /**

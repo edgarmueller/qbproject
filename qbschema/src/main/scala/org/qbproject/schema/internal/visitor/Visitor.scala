@@ -42,7 +42,7 @@ trait Visitor[O] {
    *               the matched array
    * @return a JsResult containing a result of type O
    */
-  def atArray(schema: QBArray, elements: Seq[O], path: QBPath, jsArray: JsArray): JsResult[O]
+  def atArray(schema: QBArray, elements: List[O], path: QBPath, jsArray: JsArray): JsResult[O]
 
   /**
    * Called when the value processor encounters an object.
@@ -58,7 +58,7 @@ trait Visitor[O] {
    *             the matched object
    * @return a JsResult containing a result of type O
    */
-  def atObject(schema: QBClass, fields: Seq[(String, O)], path: QBPath, jsObject: JsObject): JsResult[O]
+  def atObject(schema: QBClass, fields: List[(String, O)], path: QBPath, jsObject: JsObject): JsResult[O]
 
 }
 

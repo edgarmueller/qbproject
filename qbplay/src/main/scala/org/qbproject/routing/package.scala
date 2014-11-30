@@ -21,7 +21,7 @@ package object routing extends QBRouteWrapping {
   def double = DoubleParam
 
   /**
-   * Router DSL. Start for the route builder `GET / "something"
+   * Router DSL. Start for the route builder GET / "something"
    */
   implicit def stringToMethod(methodName: String): MethodMatcher = new MethodMatcher(methodName)
   implicit def stringToRouteBuilder(method: String)(implicit collector: RouteCollector = VoidCollector) = new Builder0(stringToMethod(method), "/", collector)

@@ -30,7 +30,7 @@ class PathMatcher(path: String) {
   def matches(pathToMatch: String): Boolean = regex.pattern.matcher(pathToMatch).matches
   def unapplySeq(target: Any): Option[List[String]] = regex.unapplySeq(target)
   def withNewPath(path: String): PathMatcher = new PathMatcher(path)
-  override val toString = regex.toString
+  override val toString = regex.toString()
 }
 
 trait PathParam[A] {

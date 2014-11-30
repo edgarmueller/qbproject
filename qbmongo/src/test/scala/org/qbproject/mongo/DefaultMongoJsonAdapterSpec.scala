@@ -1,15 +1,17 @@
 package org.qbproject.mongo
 
-import org.specs2.mutable.Specification
-import play.api.libs.json.{JsArray, JsObject, JsString, Json}
-
-import org.qbproject.schema.{QBClass, QBSchema}
-import QBSchema._
-import reactivemongo.bson.BSONObjectID
-
 import org.joda.time.DateTime
+import org.qbproject.mongo.MongoConversion.{InBound, OutBound}
+import org.qbproject.mongo.MongoOp.MongoOp
+import org.specs2.mutable.Specification
+import reactivemongo.bson.BSONObjectID
+import play.api.libs.json._
+import org.qbproject.schema._
+import org.qbproject.schema.QBSchema._
+import scalaz._
+import Scalaz._
 
-class MongoTransformerSpec extends Specification {
+class DefaultMongoJsonAdapterSpec extends Specification {
 
   "MongoTransformer" should {
 
@@ -20,8 +22,8 @@ class MongoTransformerSpec extends Specification {
 
     "support writes" in {
       val i = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.toMongoJson(i)
+
+      val result = DefaultMongoConversion.apply(schema).toMongoJson(i)
       result.get must beEqualTo(Json.obj(
         "o" -> Json.obj("$oid" -> id),
         "d" -> Json.obj("$date" -> date),
@@ -31,8 +33,7 @@ class MongoTransformerSpec extends Specification {
     "support writes with multiple nested" in {
       val schema = qbClass("o" -> objectId, "d" -> qbDateTime, "e" -> qbPosixTime, "i" -> qbClass("x" -> objectId))
       val i = Json.obj("o" -> id, "d" -> date, "e" -> time, "i" -> Json.obj("x" -> id))
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.toMongoJson(i)
+      val result = DefaultMongoConversion.apply(schema).toMongoJson(i)
       result.get must beEqualTo(Json.obj(
         "o" -> Json.obj("$oid" -> id),
         "d" -> Json.obj("$date" -> date),
@@ -46,9 +47,7 @@ class MongoTransformerSpec extends Specification {
         "d" -> Json.obj("$date" -> date),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val res = mongoTransformer.fromMongoJson(i)
-      res.get must beEqualTo(expected)
+      DefaultMongoConversion.apply(schema).fromMongoJson(i).get must beEqualTo(expected)
     }
 
     "support reads with array" in {
@@ -62,8 +61,7 @@ class MongoTransformerSpec extends Specification {
         "d" -> Json.obj("$date" -> date),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> Json.arr(id), "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.fromMongoJson(i)
+      val result = DefaultMongoConversion.apply(schema).fromMongoJson(i)
       result.get must beEqualTo(expected)
     }
 
@@ -75,15 +73,12 @@ class MongoTransformerSpec extends Specification {
         "d" -> Json.obj("o2" -> Json.obj("$oid" -> id)),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> id, "d" -> Json.obj("o2" -> id), "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.fromMongoJson(i).get must beEqualTo(expected)
+      DefaultMongoConversion.apply(schema).fromMongoJson(i).get must beEqualTo(expected)
     }
 
     "support multiple, nested reads" in {
 
       val schema = qbClass("o" -> objectId, "d" -> qbDateTime, "e" -> qbPosixTime)
-
-
       val i = Json.obj(
         "o" -> Json.obj(
           "$oid" -> id
@@ -105,15 +100,12 @@ class MongoTransformerSpec extends Specification {
           "g" -> Json.obj(
             "date" -> date,
             "time" -> time)))
-      val mongoTransformer = new MongoTransformer(schema
-        ++ qbClass(
+      val extendedSchema = schema ++ qbClass(
         "f" -> qbClass(
           "g" -> qbClass(
             "date" -> qbDateTime,
-            "time" -> qbPosixTime))))
-      val result = mongoTransformer.fromMongoJson(i)
-
-      result.asOpt.isDefined must beTrue
+            "time" -> qbPosixTime)))
+      val result = DefaultMongoConversion.apply(extendedSchema).fromMongoJson(i)
       result.get must beEqualTo(expected)
     }
 
@@ -139,15 +131,14 @@ class MongoTransformerSpec extends Specification {
             "date" -> date,
             "date2" -> date,
             "time" -> time)))
-      val mongoTransformer = new MongoTransformer(schema ++ qbClass(
+      val extendedSchema = schema ++ qbClass(
         "f" -> qbClass(
           "g" -> qbClass(
             "date" -> qbDateTime,
             "date2" -> qbDateTime,
-            "time" -> qbPosixTime))))
+            "time" -> qbPosixTime)))
 
-      val result = mongoTransformer.fromMongoJson(input)
-      result.asOpt.isDefined must beTrue
+      val result = DefaultMongoConversion.apply(extendedSchema).fromMongoJson(input)
       result.get must beEqualTo(expected)
     }
 
@@ -185,34 +176,29 @@ class MongoTransformerSpec extends Specification {
             "coordinates" -> Json.obj(
               "lat" -> 12.34,
               "lng" -> 23.45))))
-      val mongoTransformer = new MongoTransformer(dbCompany)
-      val jsValue = mongoTransformer.toMongoJson(company)
-      jsValue.asOpt must beSome
-    }
-
-    "fail validation" in {
-      val date = new DateTime().toString()
-
-      val company = Json.obj(
-        "id" -> BSONObjectID.generate.stringify,
-        "lastModified" -> date,
-        "creationDate" -> date,
+      val result = DefaultMongoConversion.apply(dbCompany).toMongoJson(company)
+      result.get must beEqualTo(Json.obj(
+        "id" -> Json.obj("$oid" -> id),
+        "lastModified" -> Json.obj("$date" -> date),
+        "creationDate" -> Json.obj("$date" -> date),
         "companyId" -> 1,
         "companyStatus" -> "active",
         "company" -> Json.obj(
+          "name" -> "ACME",
           "location" -> Json.obj(
-            "lat" -> 12.34,
-            "lng" -> 23.45)))
-      val mongoTransformer = new MongoTransformer(schema)
-      val jsValue = mongoTransformer.toMongoJson(company)
-      jsValue.asOpt must beNone
+            "coordinates" -> Json.obj(
+              "lat" -> 12.34,
+              "lng" -> 23.45)
+          )
+        )
+      ))
     }
+
 
     "support optional writes with present field" in {
       val schema = qbClass("o" -> objectId, "d" -> optional(qbDateTime), "e" -> qbPosixTime)
       val instance = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.toMongoJson(instance)
+      val result = DefaultMongoConversion.apply(schema).toMongoJson(instance)
       result.get must beEqualTo(Json.obj(
         "o" -> Json.obj("$oid" -> id),
         "d" -> Json.obj("$date" -> date),
@@ -226,15 +212,13 @@ class MongoTransformerSpec extends Specification {
         "d" -> Json.obj("$date" -> date),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.fromMongoJson(instance).get must beEqualTo(expected)
+      DefaultMongoConversion.apply(schema).fromMongoJson(instance).get must beEqualTo(expected)
     }
 
     "support optional writes with missing field" in {
       val schema = qbClass("o" -> objectId, "d" -> optional(qbDateTime), "e" -> qbPosixTime)
       val instance = Json.obj("o" -> id, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.toMongoJson(instance)
+      val result = DefaultMongoConversion.apply(schema).toMongoJson(instance)
       result.get must beEqualTo(Json.obj(
         "o" -> Json.obj("$oid" -> id),
         "e" -> Json.obj("$date" -> time)))
@@ -246,15 +230,13 @@ class MongoTransformerSpec extends Specification {
         "$oid" -> id),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> id, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.fromMongoJson(instance).get must beEqualTo(expected)
+      DefaultMongoConversion.apply(schema).fromMongoJson(instance).get must beEqualTo(expected)
     }
 
     "support default writes with present field" in {
       val schema = qbClass("o" -> objectId, "d" -> default(qbDateTime, JsString(date)), "e" -> qbPosixTime)
       val instance = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      val result = mongoTransformer.toMongoJson(instance)
+      val result = DefaultMongoConversion.apply(schema).toMongoJson(instance)
       result.get must beEqualTo(Json.obj(
         "o" -> Json.obj("$oid" -> id),
         "d" -> Json.obj("$date" -> date),
@@ -268,8 +250,7 @@ class MongoTransformerSpec extends Specification {
         "d" -> Json.obj("$date" -> date),
         "e" -> Json.obj("$date" -> time))
       val expected = Json.obj("o" -> id, "d" -> date, "e" -> time)
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.fromMongoJson(instance).get must beEqualTo(expected)
+      DefaultMongoConversion.apply(schema).fromMongoJson(instance).get must beEqualTo(expected)
     }
 
     /**
@@ -279,16 +260,16 @@ class MongoTransformerSpec extends Specification {
       val schema = qbClass("id" -> objectId)
       val instance = Json.obj("_id" -> Json.obj("$oid" -> "52eb6c66e4b08a001831aa9a"))
       val expected = Json.obj("id" -> "52eb6c66e4b08a001831aa9a")
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.fromMongoJson(instance).get must beEqualTo(expected)
+      val adapterBuilder = (MongoIdConversion.apply |@| DefaultMongoConversion.apply) { _ compose _ }
+      adapterBuilder(schema).fromMongoJson(instance).get must beEqualTo(expected)
     }
 
     "rewrite id to _id" in {
       val schema = qbClass("id" -> objectId)
       val instance = Json.obj("id" -> "52eb6c66e4b08a001831aa9a")
       val expected = Json.obj("_id" -> Json.obj("$oid" -> "52eb6c66e4b08a001831aa9a"))
-      val mongoTransformer = new MongoTransformer(schema)
-      mongoTransformer.toMongoJson(instance).get must beEqualTo(expected)
+      val adapterBuilder = (MongoIdConversion.apply |@| DefaultMongoConversion.apply) { _ compose _ }
+      adapterBuilder(schema).toMongoJson(instance).get must beEqualTo(expected)
     }
 
     "rewrite object to geo json" in {
@@ -327,9 +308,12 @@ class MongoTransformerSpec extends Specification {
           }
         )
       )
-      val mongoTransformer = new MongoTransformer(schema, List(toGeoJson, toMongoId))
-      val res = mongoTransformer.toMongoJson(instance)
-      res.get must beEqualTo(expected)
+      val geoConversion = (cls: QBClass) => new MongoConversion {
+        override def toMongoJson(op: MongoOp): InBound = o => JsSuccess(toGeoJson(o))
+        override def fromMongoJson(op: MongoOp): OutBound = ???
+      }
+      val conversionBuilder = (MongoIdConversion.apply |@| geoConversion |@| DefaultMongoConversion.apply) { _ compose _ compose _}
+      conversionBuilder(schema).toMongoJson(instance).get must beEqualTo(expected)
     }
 
     "rewrite object to geo json" in {
@@ -366,10 +350,12 @@ class MongoTransformerSpec extends Specification {
           }
         )
       )
-      val mongoTransformer = new MongoTransformer(schema, List(), List(fromGeoJson, fromMongoId))
-      val res = mongoTransformer.fromMongoJson(instance)
-      res.get must beEqualTo(expected)
+      val geoConversion = (cls: QBClass) => new MongoConversion {
+        override def toMongoJson(op: MongoOp): InBound = o => ???
+        override def fromMongoJson(op: MongoOp): OutBound = o => JsSuccess(fromGeoJson(o))
+      }
+      val conversionBuilder = (MongoIdConversion.apply |@| geoConversion |@| DefaultMongoConversion.apply) { _ compose _ compose _}
+      conversionBuilder(schema).fromMongoJson(instance).get must beEqualTo(expected)
     }
   }
-
 }

@@ -1,17 +1,19 @@
 package org.qbproject.mongo
 
+import org.joda.time.DateTime
+import org.specs2.mutable.Specification
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-
-import org.specs2.mutable.Specification
-import org.joda.time.DateTime
+import scala.concurrent.{Await, Future}
+import org.qbproject.schema._
 import org.qbproject.schema.QBSchema._
-import org.qbproject.schema.QBClass
-import scala.concurrent.Future
+import scalaz._
+import Scalaz._
 
 class QBCollectionValidationSpec extends Specification {
 
-import QBCollectionValidationSpec._
+  import org.qbproject.mongo.QBCollectionValidationSpec._
+
 
   "QBCollectionValidation on a mocked QBMongoCollection" should {
     // note that the input is required to be the sampleJson,
@@ -19,11 +21,13 @@ import QBCollectionValidationSpec._
     // version of this sample where required
 
     "validate getAll" in {
-      mock.getAll() must containAllOf(List(sampleJson, sampleJson)).await
+      val all = mock.all()
+      all must containAllOf(List(sampleJson, sampleJson)).await
+      all must haveSize[List[JsObject]](2).await
     }
 
     "validate getById" in {
-      mock.getById("not used") must beSome(sampleJson).await
+      mock.findById("not used") must beSome(sampleJson).await
     }
 
     "validate find" in {
@@ -52,6 +56,10 @@ import QBCollectionValidationSpec._
 
     "validate create" in {
       mock.create(sampleJson) must beEqualTo(sampleJson).await
+    }
+
+    "invalidate create" in {
+      Await.result(mock.create(invalidSampleJson), scala.concurrent.duration.DurationInt(3) second) should throwAn[QBValidationException]
     }
 
     "validate delete" in {
@@ -83,6 +91,12 @@ object QBCollectionValidationSpec {
     "e" -> time,
     "i" -> Json.obj("x" -> id))
 
+
+  val invalidSampleJson = Json.obj(
+    "id" -> id,
+    "d" -> date,
+    "i" -> Json.obj("x" -> id))
+
   val sampleWithDateOnly = Json.obj(
     "d" -> date)
 
@@ -100,23 +114,33 @@ object QBCollectionValidationSpec {
   val mongoWithDateOnly = Json.obj(
     "d" -> Json.obj("$date" -> date))
 
-  val mongoTransformer = new MongoTransformer(sampleSchema)
-  val result = mongoTransformer.toMongoJson(sampleJson)
+//  val mongoTransformer = new MongoTransformer(sampleSchema)
+//  val result = mongoTransformer.toMongoJson(sampleJson)
 
-  val mock = new QBMockupCollection with QBCollectionValidation {
-    val schema = sampleSchema // also test lazy init of the anonymous class here
-  }
+  // TODO: compose adapter like this: MongoIdAdapter . ValidationAdapter . DefaultMongoAdapter
+  // ..and get rid of adapter terminology
+  // to mongo
+  //   1. extend json
+  //   2. validate json with internal schema
+  //   3. rename id field to _id
+  // from mongo
+  //   1. rename _id to id --> implies that the validator needs
+  //   2. validate json with internal schema (one schema is enough!)
+  //   3. flatten json
+
+  val adapter: QBClass => MongoConversion = (MongoIdConversion.apply |@|  DefaultMongoConversion.apply |@| ValidatingConversion.apply) { _ compose _ compose _ }
+  val mock =  new QBAdaptedMongoCollection(new QBMockupCollection(), sampleSchema, adapter(sampleSchema))
 
   // sample collection
   class QBMockupCollection extends QBMongoCollection(null)(null) {
-    override def getCount = Future.successful(1)
+    override def count = Future.successful(1)
 
-    override def getAll(skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = {
+    override def all(skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = {
       // insert a non-validating json obj, this should be filtered out later
       Future.successful(List(mongoJson, Json.obj("notThere" -> 1337), mongoJson, Json.obj("notThere" -> 1337)))
     }
 
-    override def getById(id: ID): Future[Option[JsObject]] = {
+    override def findById(id: ID): Future[Option[JsObject]] = {
       Future.successful(Some(mongoJson))
     }
 
@@ -145,8 +169,7 @@ object QBCollectionValidationSpec {
     }
 
     override def update(query: JsObject, update: JsObject): Future[JsObject] = {
-      if ((query == sampleJson) &&
-          (update == mongoJson)) {
+      if ((query == sampleJson) && (update == mongoJson)) {
         Future.successful(mongoJson)
       } else {
         Future.failed(null)

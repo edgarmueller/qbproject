@@ -8,7 +8,7 @@ import scalaz.{Failure, Success}
 import scalaz.Validation.fromTryCatch
 import org.qbproject.schema.{QBBoolean, QBType}
 
-class JsStringToBooleanTypeProcessor extends TypeProcessor {
+case object JsStringToBooleanTypeProcessor extends TypeProcessor {
 
   override def process(qbType: QBType, input: JsValue, path: QBPath): JsResult[JsValue] = {
     qbType match {
