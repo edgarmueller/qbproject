@@ -38,7 +38,7 @@ package object mongo {
 
     def apply(collectionName: String, db: DB, schema: QBClass): QBAdaptedMongoCollection = {
 
-      val conversionBuilder = (MongoIdConversion.apply |@| DefaultMongoConversion.apply) { _ compose _}
+      val conversionBuilder = (MongoIdConversion.apply |@| DefaultMongoConversion.apply |@| ValidatingConversion.apply) { _ compose _ compose _ }
 
       new QBAdaptedMongoCollection(new QBMongoCollection(collectionName)(db),
         schema,
