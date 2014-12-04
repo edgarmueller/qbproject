@@ -84,21 +84,23 @@ qbSchema was designed with extensibility in mind and as such allows introducing 
 
 ```scala
 // Define your new QBType
-class MyImage(rules: Set[ValidationRule[JsString]]) extends QBStringImpl(rules)
+class QBImage(rules: Set[ValidationRule[JsString]]) extends QBStringImpl(rules)
 // Create a DSL helper
-def imagePath = new MyImage(Set.empty)
+def image = new QBImage(Set.empty)
 
 // Create a schema with your newly created type.
-val images = qbList(qbClass(
-  "label" -> qbString,
-  "path" -> imagePath
-))
+val schema = qbClass("img" -> image)
+val instance = Json.obj("img" -> "otto.png")
 
-// Use the helpers provided by QB to transform your JSON. E.g. prepending an URL to every MyImage type.
-QBJsValueUpdater[MyImage]().update(schema)(instance) {
-  case JsString(path) => JsString("http://qbproject.org/images/" + path)
-}
+val isQBImage = (qbType: QBType) => qbType.isInstanceOf[QBImage]
+
+// Use the helpers provided by QB to transform your JSON. E.g. prepending an URL to every QBImage type.
+schema.transform(instance)(
+  isQBImage -> { case JsString(path) => JsString("public/images/" + path) }
+)
 ```
+###qbMongo
+// TODO: describe mongo integration
 
 ###qbPlay
 //TODO: describe
