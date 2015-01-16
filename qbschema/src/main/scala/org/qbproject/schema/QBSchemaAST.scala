@@ -46,7 +46,10 @@ trait QBClass extends QBType with QBBaseType with CompositeRule[JsObject] {
    */
   def attributes: Seq[QBAttribute]
 
-  def apply(attributeName: String): Option[QBAttribute] = attributes.find(_.name == attributeName)
+  // TODO: documentation
+  def apply(attributeName: String): QBType = {
+    attributes.find(_.name == attributeName).get.qbType
+  }
 
   override def toString = "object"
 }
@@ -208,6 +211,8 @@ case class QBAttribute(name: String, qbType: QBType, annotations: Seq[QBAnnotati
 case class QBDefaultAnnotation(value: JsValue) extends QBAnnotation
 case class QBOptionalAnnotation(fallBack: Option[JsValue] = None) extends QBAnnotation
 case class QBReadOnlyAnnotation() extends QBAnnotation
+case class QBIdAnnotation() extends QBAnnotation
+case class QBForeignKeyAnnotation() extends QBAnnotation
 
 /**
  * DSL helper class
