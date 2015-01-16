@@ -40,7 +40,6 @@ object DefaultMongoConversion {
     val toExtendedJson: JsObject => JsResult[JsObject] = { (o: JsObject) =>
 
       def wrapWithJsObject(fieldName: String, value: JsValueWrapper) = Json.obj(fieldName -> value)
-
       val result = extendedQBKeys.foldLeft(new JsValueUpdateBuilder(schema))((builder, key) =>
         builder.byPredicate(key._1.isInstance) {
           case s: JsString  => wrapWithJsObject(key._2, s.value)
@@ -48,6 +47,7 @@ object DefaultMongoConversion {
           case b: JsBoolean => wrapWithJsObject(key._2, b.value)
         }
       ).go(o)
+      // TODO: add logger
       JsSuccess(result)
     }
 

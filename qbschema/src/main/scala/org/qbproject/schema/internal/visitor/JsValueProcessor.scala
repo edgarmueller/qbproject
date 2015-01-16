@@ -180,7 +180,7 @@ case class JsValueProcessor(annotationProcessors: Map[Class[_], AnnotationProces
         } else {
           // TODO: is isConstrainedClass is true, add violation of constraint to error message
           ((errs: List[JsError]) =>
-            JsError(attrPath.toJsPath, ValidationError("Couldn't find Attribute at " + attrPath.toString)) :: errs) <-: acc
+            JsError(attrPath.toJsPath, ValidationError("Missing attribute at " + attrPath.toString)) :: errs) <-: acc
         }
       } { value =>
         process(attr.qbType, attrPath, value) match {

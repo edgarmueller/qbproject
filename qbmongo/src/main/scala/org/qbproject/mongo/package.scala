@@ -45,19 +45,4 @@ package object mongo {
         conversionBuilder(schema))
     }
   }
-
-  object toMongoId extends (JsObject => JsResult[JsObject]) {
-    override def apply(jsObject: JsObject): JsResult[JsObject]= JsSuccess(JsObject(jsObject.fields.map {
-      case ("id", value) => ("_id", value)
-      case fd => fd
-    }))
-  }
-
-  object fromMongoId extends (JsObject => JsResult[JsObject]) {
-    override def apply(jsObject: JsObject): JsResult[JsObject] = JsSuccess(
-      JsObject(jsObject.fields.map {
-        case ("_id", value) => ("id", value)
-        case fd => fd
-      }))
-    }
 }

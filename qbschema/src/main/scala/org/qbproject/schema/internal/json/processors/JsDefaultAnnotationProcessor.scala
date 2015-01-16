@@ -24,12 +24,16 @@ class JsDefaultAnnotationProcessor extends AnnotationProcessor {
    * @return a JsResult containing a result of type O
    */
   def process(attr: QBAttribute, input: Option[JsValue], path: QBPath, jsObject: JsObject): Option[JsValue] = {
-    attr.annotations
-      .collectFirst { case default: QBDefaultAnnotation => default }
-      .fold {
+    if (input.isDefined) {
       input
-    } { defaultAnnotation =>
-      Some(defaultAnnotation.value)
+    } else {
+      attr.annotations
+        .collectFirst { case default: QBDefaultAnnotation => default}
+        .fold[Option[JsValue]] {
+        None
+      } { defaultAnnotation =>
+        Some(defaultAnnotation.value)
+      }
     }
   }
 

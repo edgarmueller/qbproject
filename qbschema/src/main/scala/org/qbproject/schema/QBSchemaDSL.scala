@@ -144,20 +144,34 @@ trait QBSchemaDSL {
   /**
    * Mark the attribute as optional.
    */
-  def optional(qbType: QBType): AnnotatedQBType =
-    AnnotatedQBType(qbType, List(QBOptionalAnnotation()))
+  def optional(qbType: QBType): AnnotatedQBType = qbType match {
+    case q: AnnotatedQBType => q.copy(annotations = QBOptionalAnnotation() :: q.annotations)
+    case _ => AnnotatedQBType(qbType, List(QBOptionalAnnotation()))
+  }
 
   /**
    * Mark the attribute as optional with a default value that is used
    * in case the attribute is not present.
    */
-  def optional(qbType: QBType, defaultValue: JsValue): AnnotatedQBType =
-    AnnotatedQBType(qbType, List(QBOptionalAnnotation(Some(defaultValue))))
+  // TODOO: fix me
+  def optional(qbType: QBType, defaultValue: JsValue): AnnotatedQBType = qbType match {
+    case q: AnnotatedQBType => q.copy(annotations = QBOptionalAnnotation(Some(defaultValue)) :: q.annotations)
+    case _ => AnnotatedQBType(qbType, List(QBOptionalAnnotation(Some(defaultValue))))
+  }
+//  AnnotatedQBType(qbType, List(QBOptionalAnnotation(Some(defaultValue))))
 
   /**
    * Mark the attribute as read-only.
    */
   def readOnly(qbType: QBType): AnnotatedQBType =
-    AnnotatedQBType(qbType, List(new QBReadOnlyAnnotation))
+    AnnotatedQBType(qbType, List(QBReadOnlyAnnotation()))
+
+  def id(qbType: QBType): AnnotatedQBType =
+    AnnotatedQBType(qbType, List(QBIdAnnotation()))
+
+  def foreignKey(qbType: QBType): AnnotatedQBType = qbType match {
+    case q: AnnotatedQBType => q.copy(annotations = QBForeignKeyAnnotation() :: q.annotations)
+    case _ => AnnotatedQBType(qbType, List(QBForeignKeyAnnotation()))
+  }
 
 }

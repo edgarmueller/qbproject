@@ -17,23 +17,25 @@ object Version {
   val specs2        = "2.3.13"
   val spray         = "1.3.2"
   val akka          = "2.3.6"
+  val scalaLogging  = "3.1.0"
 }
 
 object Library {
 
-  val jsonZipper    = "com.mandubian"     %% "play-json-zipper"    % Version.jsonZipper
-  val openCsv       = "net.sf.opencsv"    %  "opencsv"             % Version.openCsv
-  val sprayCan      = "io.spray"          %% "spray-can"           % Version.spray
-  val sprayHttp     = "io.spray"          %% "spray-http"          % Version.spray
-  val sprayRouting  = "io.spray"          %% "spray-routing"       % Version.spray
-  val reactiveMongo = "org.reactivemongo" %% "play2-reactivemongo" % Version.reactiveMongo
-  val scalaz        = "org.scalaz"        %% "scalaz-core"         % Version.scalaz
-  val akkaActor     = "com.typesafe.akka" %% "akka-actor"          % Version.akka
-  val play          = "com.typesafe.play" %% "play"                % Version.play
-  val playJson      = "com.typesafe.play" %% "play-json"           % Version.play
-  val playTest      = "com.typesafe.play" %% "play-test"           % Version.play           % "test"
-  val scalameter    = "com.storm-enroute" %% "scalameter"          % Version.scalameter     % "test"
-  val specs2        = "org.specs2"        %% "specs2"              % Version.specs2         % "test"
+  val jsonZipper    = "com.mandubian"     %% "play-json-zipper"       % Version.jsonZipper
+  val openCsv       = "net.sf.opencsv"    %  "opencsv"                % Version.openCsv
+  val sprayCan      = "io.spray"          %% "spray-can"              % Version.spray
+  val sprayHttp     = "io.spray"          %% "spray-http"             % Version.spray
+  val sprayRouting  = "io.spray"          %% "spray-routing"          % Version.spray
+  val reactiveMongo = "org.reactivemongo" %% "play2-reactivemongo"    % Version.reactiveMongo
+  val scalaz        = "org.scalaz"        %% "scalaz-core"            % Version.scalaz
+  val akkaActor     = "com.typesafe.akka" %% "akka-actor"             % Version.akka
+  val play          = "com.typesafe.play" %% "play"                   % Version.play
+  val playJson      = "com.typesafe.play" %% "play-json"              % Version.play
+  val scalaLogging  = "com.typesafe.scala-logging" %% "scala-logging" % Version.scalaLogging
+  val playTest      = "com.typesafe.play" %% "play-test"              % Version.play           % "test"
+  val scalameter    = "com.storm-enroute" %% "scalameter"             % Version.scalameter     % "test"
+  val specs2        = "org.specs2"        %% "specs2"                 % Version.specs2         % "test"
 
 }
 
@@ -59,6 +61,7 @@ object Dependencies {
   val qbMongo = List(
     playJson,
     reactiveMongo,
+    scalaLogging,
     scalaz,
     specs2
   )
@@ -178,7 +181,7 @@ object QBBuild extends Build {
 
   /** TODO: assets.jar has been published manually, can we do better? **/
   lazy val qbForms = Project("qbforms", file("qbforms"))
-    .enablePlugins(play.PlayScala)
+//    .enablePlugins(play.PlayScala)
     .settings(commonSettings: _*)
     .settings(releaseSettings: _*)
     .settings(
@@ -189,7 +192,7 @@ object QBBuild extends Build {
     ).dependsOn(schemaProject, playProject)
 
   lazy val playSampleProject =  Project("qbplay-sample", file("qbplay-sample"))
-    .enablePlugins(play.PlayScala)
+//    .enablePlugins(play.PlayScala)
     .settings(releaseSettings: _*)
     .settings(commonSettings: _*)
     .settings(
