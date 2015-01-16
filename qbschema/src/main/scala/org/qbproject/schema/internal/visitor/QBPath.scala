@@ -32,4 +32,5 @@ case class QBPath(paths: List[PathNode] = List.empty) {
     })
   }
 
+  override def toString: String = paths.reverse.map(_.toString).mkString("/")
 }
