@@ -5,7 +5,7 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.api.{QueryOpts, DB}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.core.commands.{FindAndModify, Update, Count}
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class QBMongoCollection(collectionName: String)(db: DB) extends QBMongoCollectionInterface {
@@ -26,6 +26,7 @@ class QBMongoCollection(collectionName: String)(db: DB) extends QBMongoCollectio
   }
 
   def find(query: JsObject, skip: Int = 0, limit: Int = 100): Future[List[JsObject]] = {
+
     val cursor = collection.find(query)
       .options(QueryOpts().skip(skip))
       .cursor[JsObject]
@@ -67,12 +68,15 @@ class QBMongoCollection(collectionName: String)(db: DB) extends QBMongoCollectio
       ))
       case _ => obj
     }
+
     collection.insert(toCreate).map(lastError =>
       if (lastError.ok) toCreate 
       else throw new RuntimeException("oh noes."))
   }
 
-  def update(id: ID, update: JsObject): Future[JsObject] = {
+  def update(id: ID, updatedObject: JsObject): Future[JsObject] = {
+    // remove _id field if present
+    val update = updatedObject.-("_id")
     val query = Json.obj("_id" -> Json.obj("$oid" -> id))
     val updateJson = update \ "$set" match {
       case un: JsUndefined => Json.obj("$set" -> update)
@@ -101,6 +105,7 @@ class QBMongoCollection(collectionName: String)(db: DB) extends QBMongoCollectio
   import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
   implicit def jsonToBson(obj: JsObject): BSONDocument = JsObjectWriter.write(obj)
+
   implicit def bsonToJson(obj: BSONDocument): JsObject = JsObjectReader.read(obj)
 
 }

@@ -1,24 +1,19 @@
 package org.qbproject.mongo
 
+import com.typesafe.scalalogging.LazyLogging
 import org.qbproject.mongo.MongoOp.MongoOp
-import org.qbproject.schema.{QBValidationException, QBClass}
+import org.qbproject.schema.{QBClass, QBValidationException}
 import play.api.libs.json._
 
-import scala.concurrent.Future
-import scalaz.{OptionT, Monad, Functor}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
+import scalaz.OptionT
 
-class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: QBClass, adapter: MongoConversion) extends QBMongoCollectionInterface {
+class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: QBClass, adapter: MongoConversion)
+  extends QBMongoCollectionInterface with LazyLogging {
 
-  // provide functor instance for Future
-  implicit def FutureFunctor: Functor[Future] = new Functor[Future] {
-    override def map[A, B](fa: Future[A])(f: (A) => B): Future[B] = fa.map(f)
-  }
-
-  implicit def FutureMonad: Monad[Future] = new Monad[Future] {
-    override def point[A](a: => A): Future[A] = Future.successful(a)
-    override def bind[A, B](fa: Future[A])(f: (A) => Future[B]): Future[B] = fa.flatMap(f)
-  }
+  import org.qbproject.mongo.FutureMonad._
 
   def schema = qbClass
 
@@ -29,12 +24,24 @@ class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: 
 
   override def findById(id: ID): Future[Option[JsObject]] = {
     implicit val op = MongoOp.FindById
-    OptionT[Future, JsObject](collection.findById(id)).flatMapF(outBound).run
+    val findFuture: Future[Option[JsObject]] = collection.findById(id)
+    val f = OptionT[Future, JsObject](findFuture).flatMapF[JsObject](outBound).run
+    f.onComplete {
+      case Success(success) => logger.debug(s"[findById - Success (id: $id)], found $success")
+      case Failure(failure) => logger.debug(s"[findById - Failure (id: $id)] $failure")
+    }
+    f
   }
 
   override def update(id: ID, update: JsObject): Future[JsObject] = {
     implicit val op = MongoOp.UpdateById
-    inBound(update).flatMap(collection.update(id, _).flatMap(outBound))
+    // TODO: it's so hard to debug this stuff, if fields are filtered our for validation constraint reasons..
+    val f = inBound(update).flatMap(e => collection.update(id, e)).flatMap(outBound)
+    f.onComplete {
+      case Success(success) => logger.debug(s"[update - Success (id: $id)], found $success")
+      case Failure(failure) => logger.debug(s"[update - Failure (id: $id)] $failure")
+    }
+    f
   }
 
   override def update(query: JsObject, update: JsObject): Future[JsObject] = {
@@ -59,7 +66,15 @@ class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: 
 
   override def find(query: JsObject, skip: Int, limit: Int): Future[List[JsObject]] = {
     implicit val op = MongoOp.Find
-    collection.find(query, skip).flatMap(outBoundMany)
+    val f = for {
+      res <- collection.find(query, skip)
+      o <- outBoundMany(res)
+    } yield o
+    f.onComplete {
+      case Success(success) => logger.debug(s"[find - Success (query: $query)], found $success")
+      case Failure(failure) => logger.debug(s"[find - Failure (query: $query)] $failure")
+    }
+    f
   }
 
   override def delete(id: ID): Future[Boolean] = {
@@ -69,7 +84,8 @@ class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: 
 
   override def create(obj: JsObject): Future[JsObject] = {
     implicit val op = MongoOp.Create
-    inBound(obj).flatMap(collection.create(_).flatMap(outBound))
+    val x = inBound(obj)
+    x.flatMap(collection.create).flatMap(outBound)
   }
 
   private def inBound(obj: JsObject)(implicit op: MongoOp): Future[JsObject] = {
