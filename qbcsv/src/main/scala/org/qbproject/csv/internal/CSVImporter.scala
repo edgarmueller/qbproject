@@ -202,10 +202,10 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
                   deepJoin(joinTarget, attributePath, data)
                 } else {
                   initDataSchema(secondaryData.attributeName) match {
-                    case Some(attr) if attr.qbType.isInstanceOf[QBClass] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data.head)).successNel
-                    case Some(attr) if attr.qbType.isInstanceOf[QBArray] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data)).successNel
-                    case Some(attr) => QBCSVJoinError("TODO", "Could find ${secondaryData.keys.primaryKey} in Schema of Join Target but qbType ${attr.qbType} is not supported.").failNel
-                    case None => QBCSVJoinError("TODO", "Couldn't find ${secondaryData.keys.primaryKey} in Schema of Join Target").failNel
+                    case qbType if qbType.isInstanceOf[QBClass] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data.head)).successNel
+                    case qbType if qbType.isInstanceOf[QBArray] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data)).successNel
+                    case qbType => QBCSVJoinError("TODO", "Could find ${secondaryData.keys.primaryKey} in Schema of Join Target but qbType ${attr.qbType} is not supported.").failNel
+//                    case None => QBCSVJoinError("TODO", "Couldn't find ${secondaryData.keys.primaryKey} in Schema of Join Target").failNel
                   }
                 }
             }
