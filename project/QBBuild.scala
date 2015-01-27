@@ -11,7 +11,7 @@ object Version {
   val jsonZipper    = "1.2"
   val play          = "2.3.3"
   val openCsv       = "2.1"
-  val reactiveMongo = "0.10.5.akka23-SNAPSHOT"
+  val reactiveMongo = "0.10.5.0.akka23"
   val scalaz        = "7.0.6"
   val scalameter    = "0.6"
   val specs2        = "2.3.13"
