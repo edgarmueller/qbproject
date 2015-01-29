@@ -67,7 +67,8 @@ class QBAdaptedMongoCollection(collection: QBMongoCollectionInterface, qbClass: 
   override def find(query: JsObject, skip: Int, limit: Int): Future[List[JsObject]] = {
     implicit val op = MongoOp.Find
     val f = for {
-      res <- collection.find(query, skip)
+      // TODO: limit is ignored
+      res <- collection.find(query, skip, limit)
       o <- outBoundMany(res)
     } yield o
     f.onComplete {
