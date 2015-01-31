@@ -34,8 +34,8 @@ class CSVColumnUtilSpec extends Specification {
 
   "CSVColumnUtil" should {
 
-    def parse(value: QBType, testData: String, adapter: CSVSchemaAdapter = new CSVSchemaAdapter {}) = {
-      val parser = new CSVColumnUtil(row => adapter.adapt(value.asInstanceOf[QBClass])(row))
+    def parse(schema: QBClass, testData: String, adapter: CSVSchemaAdapter = new CSVSchemaAdapter {}) = {
+      val parser = new CSVColumnUtil(row => adapter.adapt(schema)(row))
       val resource = QBResource("virtual", new ByteArrayInputStream(testData.getBytes("utf-8")))
       parser.parse(resource.inputStream)(identity)
     }
@@ -177,8 +177,8 @@ class CSVColumnUtilSpec extends Specification {
       )
 
       val rangeRegex = "([0-9]+)\\s*-\\s*([0-9]+)".r
-      val adapter = CSVImporter("range" --> { case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt) })
-      val result = parse(rangeSchema, rangeData, adapter)
+      val adapter = CSVImporter(rangeSchema, "range" --> { case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt) })
+      val result = parse(adapter.schema, rangeData, adapter)
 
       result.size must beEqualTo(1)
       result(0).get.get must beEqualTo(Json.obj(

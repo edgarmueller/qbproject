@@ -43,7 +43,7 @@ class CSVErrorAggregationSpec extends Specification {
       val featureResource = QBResource("features.csv", new ByteArrayInputStream(featureData.getBytes("UTF-8")))
       val resourceSet = QBResourceSet(companyResource, featureResource)
 
-      val result = CSVImporter().parse("companies.csv", companySchema -- "products")(
+      val result = CSVImporter(companySchema -- "products").parse("companies.csv")(
         "features" -> resource("features.csv", "id")
       )(resourceSet)
 
@@ -80,9 +80,9 @@ class CSVErrorAggregationSpec extends Specification {
       val productResource = QBResource("products.csv", new ByteArrayInputStream(productData.getBytes("UTF-8")))
       val resourceSet = QBResourceSet(companyResource, productResource)
 
-      val result = QBCSVValidator(
+      val result = QBCSVValidator(companySchema,
         "products.colors" --> { case cell: String => Json.arr(cell.split(',').toList) }
-      ).parse("companies.csv", companySchema)(
+      ).parse("companies.csv")(
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)
 
@@ -102,7 +102,7 @@ class CSVErrorAggregationSpec extends Specification {
       val featureResource = QBResource("features.csv", new ByteArrayInputStream(featureData.getBytes("UTF-8")))
       val resourceSet = QBResourceSet(companyResource, featureResource)
 
-      val result = CSVImporter().parse("companies.xy", companySchema -- "products")(
+      val result = CSVImporter(companySchema -- "products").parse("companies.xy")(
         "features" -> resource("features.xy", "id")
       )(resourceSet)
 

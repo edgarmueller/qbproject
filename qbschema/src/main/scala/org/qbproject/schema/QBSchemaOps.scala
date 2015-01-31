@@ -338,5 +338,11 @@ class QBSchemaOps extends QBBaseSchemaOps { self =>
      */
     def isSubSetOf(otherSchema: QBClass): Boolean =
       isSubSet(schema, otherSchema)
+
+    def isOptional(path: QBStringPath): Boolean = {
+      resolveAttribute(path, schema).fold(false)(attr =>
+        attr.annotations.exists(_.isInstanceOf[QBOptionalAnnotation])
+      )
+    }
   }
 }

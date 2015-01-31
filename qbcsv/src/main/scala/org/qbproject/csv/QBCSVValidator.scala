@@ -6,7 +6,7 @@ import org.qbproject.schema._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 
-class QBCSVValidator(override val pathBuilders: Map[String, (CSVRow, String) => JsValue], separator: Char = ';', quote: Char = '"') extends CSVImporter(separator, quote) {
+class QBCSVValidator(schema: QBClass, override val pathBuilders: Map[String, (CSVRow, String) => JsValue], separator: Char = ';', quote: Char = '"') extends CSVImporter(schema, separator, quote) {
 
   override protected def internalParse(schema: QBType, resource: QBResource)
                             (joinKeys: Set[ReverseSplitKey]): List[JsResult[JsValue]] = {
@@ -15,13 +15,13 @@ class QBCSVValidator(override val pathBuilders: Map[String, (CSVRow, String) => 
   }
 
   def validate(schema: QBType, resource: QBResource): Either[QBCSVErrorMap, List[JsValue]] = {
-    parse(schema, resource)
+    parse(resource)
   }
 
   def validate(mainResourceIdentifier: String, schema: QBClass)
                      (resourceMapping: (String, ResourceReference)*)
                      (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
-    parse(mainResourceIdentifier, schema)(resourceMapping:_*)(resourceSet)
+    parse(mainResourceIdentifier)(resourceMapping:_*)(resourceSet)
   }
 
   private class CSVValidateRowUtil(schema: QBClass)(
@@ -47,7 +47,7 @@ class QBCSVValidator(override val pathBuilders: Map[String, (CSVRow, String) => 
 }
 
 object QBCSVValidator {
-  def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
-    new QBCSVValidator(CSVImporter.toPathBuilders(pathConstructors))
+  def apply(schema: QBClass, pathConstructors: (PathSpec, Any => JsValue)*) =
+    new QBCSVValidator(schema, CSVImporter.toPathBuilders(schema, pathConstructors))
 }
 

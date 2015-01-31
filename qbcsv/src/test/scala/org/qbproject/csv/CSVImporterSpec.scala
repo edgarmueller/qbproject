@@ -133,8 +133,7 @@ object CSVImporterSpec extends Specification {
      */
 
     "perform basic joins" in {
-      val companies = CSVImporter().parse(
-        Schemas.basic.companySchema keep ("id", "company"),
+      val companies = CSVImporter(Schemas.basic.companySchema keep ("id", "company")).parse(
         QBResource("companies.csv", mkInputStream(Data.basic.companyData))
       )
       val firstCompany = companies.right.get(0)
@@ -163,11 +162,11 @@ object CSVImporterSpec extends Specification {
       val companyResource = QBResource("companies.csv", mkInputStream(companyData))
       val resourceSet = QBResourceSet(rootResource, companyResource)
 
-      val companies = CSVImporter().parse(
-        "root.csv",
-        Schemas.basic.companySchema.keep("id", "company"))(
-        "company" -> resource("companies.csv", "id")
-      )(resourceSet)
+      val companies = CSVImporter(Schemas.basic.companySchema.keep("id", "company")).parse(
+        "root.csv"
+        )(
+          "company" -> resource("companies.csv", "id")
+        )(resourceSet)
 
       companies must beRight
 
@@ -190,13 +189,13 @@ object CSVImporterSpec extends Specification {
       val employeeResource  = QBResource("employees.csv", mkInputStream(Data.extended.employeeData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource, employeeResource)
 
-      val jsResults = CSVImporter(
+      val jsResults = CSVImporter(Schemas.extended.companySchema,
         "range"--> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         },
         "employees".maps("company.employees") --> {
           case employees: String => JsArray(employees.split(",").toList.map(JsString))
-        }).parse("companies.csv", Schemas.extended.companySchema)(
+        }).parse("companies.csv")(
           "features" -> resource("features.csv", "id"),
           "products" -> resource("products.csv", "id"),
           "employees" -> resource("employees.csv", "employees".splitKey <-> "eId")
@@ -292,11 +291,11 @@ object CSVImporterSpec extends Specification {
       val productsResource = QBResource("products.csv", mkInputStream(Data.extended.multiProductData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource)
 
-      val result = CSVImporter(
+      val result = CSVImporter( Schemas.basic.companySchema,
         "range" --> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         }
-      ).parse("companies.csv", Schemas.basic.companySchema)(
+      ).parse("companies.csv")(
           "features" -> resource("features.csv", "id"),
           "products" -> resource("products.csv", "id" <-> "id".splitKey)
         )(resourceSet)
@@ -366,11 +365,11 @@ object CSVImporterSpec extends Specification {
       val productsResource = QBResource("products.csv", mkInputStream(Data.extended.multiProductData))
       val resourceSet = QBResourceSet(companyResource, featureResource, productsResource)
 
-      val result = CSVImporter(
+      val result = CSVImporter(Schemas.basic.companySchema,
         "range" --> {
           case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
         }
-      ).parse("companies.csv", Schemas.basic.companySchema)(
+      ).parse("companies.csv")(
           "features" -> resource("features.csv", "id"),
           "products" -> resource("products.csv", "id" <-> "id".splitKey)
         )(resourceSet)
@@ -392,7 +391,7 @@ object CSVImporterSpec extends Specification {
         )
       )
 
-      val result = CSVImporter().parse("companies.csv", companySchema)(
+      val result = CSVImporter(companySchema).parse("companies.csv")(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
@@ -434,7 +433,7 @@ object CSVImporterSpec extends Specification {
         )
       )
 
-      val result = QBCSVValidator().parse("companies.csv", companySchema)(
+      val result = QBCSVValidator(companySchema).parse("companies.csv")(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
@@ -480,11 +479,10 @@ object CSVImporterSpec extends Specification {
         )
       )
 
-      val result = QBCSVValidator().parse("companies.csv", companySchema)(
+      val result = QBCSVValidator(companySchema).parse("companies.csv")(
         "products.options" -> resource("products.csv", "id")
       )(resourceSet)
 
-      println("<" + result.left.get)
       result must beLeft
       // TODO: fine grained check for violation
     }
@@ -508,9 +506,9 @@ object CSVImporterSpec extends Specification {
         )
       )
 
-      val result = CSVImporter(
+      val result = CSVImporter(companySchema,
         "products.colors" --> { case cell: String => JsArray(cell.split(',').map(JsString).toList) }
-      ).parse("companies.csv", companySchema)(
+      ).parse("companies.csv")(
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)
 
@@ -543,11 +541,11 @@ object CSVImporterSpec extends Specification {
       val schema = qbClass(
         "array" -> qbList(qbString))
 
-      val importer = CSVImporter("array" --> {
+      val importer = CSVImporter(schema, "array" --> {
         case x: String => JsArray(x.split("\n").map(JsString))
       })
 
-      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = importer.parse(QBResource("resource", mkInputStream(csv)))
 
       result.right.get must have size 1
       result.right.get(0) must beEqualTo(Json.obj(
@@ -566,14 +564,14 @@ object CSVImporterSpec extends Specification {
         "array" -> qbList(arrayItem)
       )
 
-      val importer = CSVImporter(
+      val importer = CSVImporter(schema,
         "array" --> {
           case x: String =>
             val fieldsList = x.split("\n").toList.map(_.split("//").toList)
             JsArray(fieldsList.map(fields => jsonObj(arrayItem, fields)))
         })
 
-      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = importer.parse(QBResource("resource", mkInputStream(csv)))
 
       result must beRight
       result.right.get(0) must beEqualTo(Json.obj(
@@ -600,9 +598,9 @@ object CSVImporterSpec extends Specification {
         "persons" -> qbList(arrayItem)
       )
 
-      val importer = CSVImporter()
+      val importer = CSVImporter(schema)
 
-      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = importer.parse(QBResource("resource", mkInputStream(csv)))
 
       result must beRight
       result.right.get(0) must beEqualTo(obj(
@@ -643,7 +641,7 @@ object CSVImporterSpec extends Specification {
         "persons" -> qbList(arrayItem)
       )
 
-      val importer = CSVImporter(
+      val importer = CSVImporter(schema,
         "persons[].age" --> {
           case x: String =>
             x.split("\\|").map(JsString).foldLeft(JsArray()){
@@ -652,7 +650,7 @@ object CSVImporterSpec extends Specification {
             }
         })
 
-      val result = importer.parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = importer.parse(QBResource("resource", mkInputStream(csv)))
 
       result must beRight
       result.right.get(0) must beEqualTo(obj(
@@ -689,7 +687,7 @@ object CSVImporterSpec extends Specification {
         "tags" -> optional(qbList(qbString))
       )
 
-      val result = CSVImporter().parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = CSVImporter(schema).parse(QBResource("resource", mkInputStream(csv)))
 
       result must beRight
       result.right.get(0) must beEqualTo(obj(
@@ -699,6 +697,33 @@ object CSVImporterSpec extends Specification {
       result.right.get(1) must beEqualTo(obj(
         "id" -> "2",
         "name" -> "bar"
+      ))
+    }
+
+    "must ignore optional fields if they are not in the CSV and a path constructor is present" in {
+      val csv =
+        """id
+          |1
+          |2""".stripMargin
+
+      val schema = qbClass(
+        "id" -> qbString,
+        "name" -> optional(qbString),
+        "tags" -> optional(qbList(qbString))
+      )
+
+      val result = CSVImporter(schema,
+        "name" --> {
+          case name: String => JsString(name.toUpperCase)
+        }
+      ).parse(QBResource("resource", mkInputStream(csv)))
+
+      result must beRight
+      result.right.get(0) must beEqualTo(obj(
+        "id" -> "1"
+      ))
+      result.right.get(1) must beEqualTo(obj(
+        "id" -> "2"
       ))
     }
 
@@ -714,7 +739,7 @@ object CSVImporterSpec extends Specification {
         "tags" -> optional(qbList(qbString), JsArray())
       )
 
-      val result = CSVImporter().parse(schema, QBResource("resource", mkInputStream(csv)))
+      val result = CSVImporter(schema).parse(QBResource("resource", mkInputStream(csv)))
 
       result must beRight
       result.right.get(0) must beEqualTo(obj(

@@ -93,6 +93,32 @@ trait QBBaseSchemaOps {
     _resolve(path, resolvable, BuildDescription.emptyDescription)
   }
 
+
+  def resolveAttribute(path: QBStringPath, resolvable: QBClass): Option[QBAttribute] = {
+
+    @tailrec
+    def _resolve(path: QBStringPath, attribute: Option[QBAttribute], resolvable: QBClass): Option[QBAttribute] = {
+      path match {
+        case Nil =>
+          attribute
+        case pathHead :: pathTail if pathHead.isEmpty => // safety check for root paths
+          attribute
+        case pathHead :: pathTail =>
+          if (pathHead.isEmpty) {
+            attribute
+          } else {
+            val attr = resolvable.attributes.find(_.name == pathHead).getOrElse(fail("field.does.not.exist [" + pathHead + "]"))
+            attr.qbType match {
+              case cls: QBClass => _resolve(pathTail, Some(attr), cls)
+              case otherType => Some(attr)
+            }
+          }
+      }
+    }
+
+    _resolve(path, None, resolvable)
+  }
+
   //
   // Extension methods based on update --
   //

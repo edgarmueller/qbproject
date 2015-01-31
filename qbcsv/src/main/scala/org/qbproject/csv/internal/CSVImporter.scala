@@ -13,7 +13,7 @@ import scalaz._
 /**
  * Internal class for importing a CSV resource according to a given schema.
  */
-class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVSchemaAdapter {
+class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Char = '"') extends CSVSchemaAdapter {
 
   protected def internalParse(schema: QBType, resource: QBResource)
                      (foreignSplitKeys: Set[ReverseSplitKey]): List[JsResult[JsValue]] = {
@@ -24,13 +24,11 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
   /**
    * Import a single resource according to a given schema.
    *
-   * @param schema
-   *               the schema which the CSV data needs to conform to
    * @param resource
    *               the resource containing the CSV data to be imported
    * @return a list of JsResult that indicate which CSV data row could be parsed into a JsValue
    */
-   def parse(schema: QBType, resource: QBResource): Either[QBCSVErrorMap, List[JsValue]] = {
+   def parse(resource: QBResource): Either[QBCSVErrorMap, List[JsValue]] = {
     val jsResult = sequenceJsResults(internalParse(schema, resource)(Set.empty))
     jsResult match {
       case JsSuccess(values, _) => Right(values)
@@ -44,8 +42,6 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
    *
    * @param mainResourceIdentifier
    *               the resource containing CSV data with foreign attributes
-   * @param schema
-   *               the schema which the main resource needs to conform to
    * @param resourceMapping
    *               a mapping describing how data should be joined. A mapping consists of a foreign attribute
    *               name and a resource.
@@ -53,7 +49,7 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
    *               the resource set containing all the resources that are involved in the import.
    *               Each resource will be closed.
    */
-   def parse(mainResourceIdentifier: String, schema: QBClass)
+   def parse(mainResourceIdentifier: String)
                      (resourceMapping: (String, ResourceReference)*)
                      (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
 
@@ -282,20 +278,22 @@ class CSVImporter(separatorChar: Char = ';', quoteChar: Char = '"') extends CSVS
 
 object CSVImporter {
 
-  def apply(pathConstructors: (PathSpec, Any => JsValue)*) =
-    new CSVImporter {
-      override val pathBuilders = toPathBuilders(pathConstructors)
+  def apply(schema: QBClass, pathConstructors: (PathSpec, Any => JsValue)*) =
+    new CSVImporter(schema) {
+      override val pathBuilders = toPathBuilders(schema, pathConstructors)
     }
 
-  def toPathBuilders(pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, (CSVRow, String) => JsValue] = {
+  def toPathBuilders(schema: QBClass, pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, (CSVRow, String) => JsValue] = {
     pathBuilderSpecs.map { pathBuilderSpec =>
       val builder = {
         (row: CSVRow, path: String) =>
+          // TODO: why try with both?
           row.getColumnData(pathBuilderSpec._1.csvPath) match {
             case Some(data) => pathBuilderSpec._2(data)
             case None => row.getColumnData(path) match {
               case Some(data) => pathBuilderSpec._2(data)
-              case None => CSVColumnUtil.getColumnData(path)(row); JsUndefined("Can't find the Path.") // this will throw an appropriate Exception.
+              case None if schema.isOptional(path) => JsUndefined("Ignored optional path")
+              case None =>CSVColumnUtil.getColumnData(path)(row); JsUndefined("Can't find the Path.") // this will throw an appropriate Exception.
             }
           }
       }
