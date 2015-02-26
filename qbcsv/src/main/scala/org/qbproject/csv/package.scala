@@ -1,7 +1,7 @@
 package org.qbproject
 
 import org.qbproject.csv.internal._
-import play.api.libs.json.{JsError, JsValue}
+import play.api.libs.json.{JsResult, JsError, JsValue}
 
 package object csv {
 
@@ -22,6 +22,13 @@ package object csv {
     }
   }
 
+  // union type for pathbuilder result type
+  class PathBuilderResult[-J]
+  object PathBuilderResult {
+    implicit object PathBuilderJsValueResult extends PathBuilderResult[JsValue]
+    implicit object PathBuilderJsResultResult extends PathBuilderResult[JsResult[JsValue]]
+  }
+
   implicit class JoinKeyExtensions(joinKey: String) {
     def splitKey(implicit separator: Char = ',') = SplitJoinKeyHelper(joinKey)
     def <->(s2: String) = JoinKey(joinKey, s2)
@@ -34,7 +41,7 @@ package object csv {
   implicit class MappedPathStringExtensions(str: String) {
     // TODO: extract constant
     def maps(otherString: String): String = str + SPLIT_TOKEN + otherString
-    def -->(pf: PartialFunction[Any, JsValue]): (PathSpec, PartialFunction[Any, JsValue]) = if (str.contains(SPLIT_TOKEN)) {
+    def -->[R : PathBuilderResult](pf: PartialFunction[String, R]): (PathSpec, PartialFunction[String, R]) = if (str.contains(SPLIT_TOKEN)) {
       val splitted = str.split(SPLIT_TOKEN).toList
       MappedPath(splitted.head, splitted.last) -> pf
     } else {

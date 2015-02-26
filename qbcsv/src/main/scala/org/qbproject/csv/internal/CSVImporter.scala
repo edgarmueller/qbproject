@@ -4,9 +4,11 @@ import org.qbproject.csv._
 import org.qbproject.csv.internal.CSVColumnUtil.CSVRow
 import org.qbproject.schema._
 import org.qbproject.schema.QBSchema._
+import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json._
 
+import scala.util.Try
 import scalaz.Scalaz._
 import scalaz._
 
@@ -15,8 +17,8 @@ import scalaz._
  */
 class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Char = '"') extends CSVSchemaAdapter {
 
-  protected def internalParse(schema: QBType, resource: QBResource)
-                     (foreignSplitKeys: Set[ReverseSplitKey]): List[JsResult[JsValue]] = {
+  protected def parseAndAdapt(schema: QBType, resource: QBResource)
+                             (foreignSplitKeys: Set[ReverseSplitKey]): List[JsResult[JsValue]] = {
     val parser = new CSVAdaptRowUtil(row => adapt(schema.asInstanceOf[QBClass])(row), foreignSplitKeys)
     parser.parse(resource, separatorChar -> quoteChar)
   }
@@ -28,8 +30,8 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
    *               the resource containing the CSV data to be imported
    * @return a list of JsResult that indicate which CSV data row could be parsed into a JsValue
    */
-   def parse(resource: QBResource): Either[QBCSVErrorMap, List[JsValue]] = {
-    val jsResult = sequenceJsResults(internalParse(schema, resource)(Set.empty))
+  def parse(resource: QBResource): Either[QBCSVErrorMap, List[JsValue]] = {
+    val jsResult: JsResult[List[JsValue]] = sequenceJsResults(parseAndAdapt(schema, resource)(Set.empty))
     jsResult match {
       case JsSuccess(values, _) => Right(values)
       case err: JsError => Left(QBCSVErrorMap(err))
@@ -49,9 +51,9 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
    *               the resource set containing all the resources that are involved in the import.
    *               Each resource will be closed.
    */
-   def parse(mainResourceIdentifier: String)
-                     (resourceMapping: (String, ResourceReference)*)
-                     (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
+  def parse(mainResourceIdentifier: String)
+           (resourceMapping: (String, ResourceReference)*)
+           (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
 
     def createResourceMapping = resourceMapping.foldLeft(ResourceMapping())((resourceMapping, singleMapping) => {
       resourceMapping + (singleMapping._1 -> singleMapping._2)
@@ -63,8 +65,8 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
   }
 
   private def parseResources(primaryResourceId: String, schema: QBClass)
-                    (resourceMapping: ResourceMapping)
-                    (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
+                            (resourceMapping: ResourceMapping)
+                            (resourceSet: QBResourceSet): Either[QBCSVErrorMap, List[JsValue]] = {
 
     def fetchPrimaryResource = resourceSet.get(primaryResourceId)
     def fetchSecondaryResources = resourceMapping.resourceIdentifiers
@@ -134,7 +136,7 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
   }
 
   private def buildSecondarySchemaMappings(schema: QBClass, resourceMapping: ResourceMapping,
-    secondaryResources: List[QBResource]): Validation[NonEmptyList[QBCSVError], List[(QBType, QBResource)]] = {
+                                           secondaryResources: List[QBResource]): Validation[NonEmptyList[QBCSVError], List[(QBType, QBResource)]] = {
 
     val secondaryResourcesMap = secondaryResources.map(secondaryResource =>
       secondaryResource.identifier -> secondaryResource
@@ -144,8 +146,8 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
       updatedSecondarySchemas <- injectJoinKeys(schema, resourceMapping)
     } yield {
       updatedSecondarySchemas.zip(resourceMapping.resourceIdentifiers)
-       .map(m => m._1 -> secondaryResourcesMap.get(m._2).get)
-       .toList
+        .map(m => m._1 -> secondaryResourcesMap.get(m._2).get)
+        .toList
     }
   }
 
@@ -176,6 +178,7 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
             foreignKey == targetId
         }
       case _ =>
+        // TODO: use logger
         println("WARN: can not resolve target " + foreignData.keys.secondaryKey +
           " on primitive value")
         false // in case target is not an object, ignore
@@ -201,7 +204,6 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
                     case qbType if qbType.isInstanceOf[QBClass] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data.head)).successNel
                     case qbType if qbType.isInstanceOf[QBArray] => joinTarget.deepMerge(Json.obj(secondaryData.attributeName -> data)).successNel
                     case qbType => QBCSVJoinError("TODO", "Could find ${secondaryData.keys.primaryKey} in Schema of Join Target but qbType ${attr.qbType} is not supported.").failNel
-//                    case None => QBCSVJoinError("TODO", "Couldn't find ${secondaryData.keys.primaryKey} in Schema of Join Target").failNel
                   }
                 }
             }
@@ -255,7 +257,7 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
     val results: List[Validation[NonEmptyList[QBCSVError], List[JsValue]]] = for {
       (qbType, resource) <- resources
     } yield {
-      val contents = internalParse(qbType, resource)(secondarySplitKeys.toSet)
+      val contents = parseAndAdapt(qbType, resource)(secondarySplitKeys.toSet)
       sequenceJsResults(contents) match {
         case err: JsError =>
           val x = QBCSVErrorMap.convertToCSVDataErrors(err)
@@ -278,28 +280,74 @@ class CSVImporter(val schema: QBClass, separatorChar: Char = ';', quoteChar: Cha
 
 object CSVImporter {
 
-  def apply(schema: QBClass, pathConstructors: (PathSpec, Any => JsValue)*) =
+  // TODO: String represents the resolved path, use tags for this?
+  type CSVPathBuilder = (CSVRow, String) => JsResult[JsValue]
+
+  def apply(schema: QBClass)(implicit dummy: DummyImplicit): CSVImporter =
+    new CSVImporter(schema)
+
+  def apply(schema: QBClass, pathBuilderSpecs: (PathSpec, String => JsValue)*): CSVImporter  =
     new CSVImporter(schema) {
-      override val pathBuilders = toPathBuilders(schema, pathConstructors)
+      override val pathBuilders: Map[String, CSVPathBuilder] = toPathBuilders(schema, pathBuilderSpecs)
     }
 
-  def toPathBuilders(schema: QBClass, pathBuilderSpecs: Seq[(PathSpec, Any => JsValue)]): Map[String, (CSVRow, String) => JsValue] = {
+  def apply(schema: QBClass, pathBuilderSpecs: (PathSpec, String => JsResult[JsValue])*)(implicit dummy: DummyImplicit): CSVImporter  =
+    new CSVImporter(schema) {
+      override val pathBuilders: Map[String, CSVPathBuilder] = toPathBuilders(schema, pathBuilderSpecs)
+    }
+
+  def toPathBuilders(schema: QBClass,
+                     pathBuilderSpecs: Seq[(PathSpec, String => JsValue)])(implicit dummy: DummyImplicit): Map[String, CSVPathBuilder] = {
+
+    def toJsResult(builder: String => JsValue, row: CSVRow, path: String): String => JsResult[JsValue]  =  (s: String)=>
+      Try { builder(s) } match {
+        case scala.util.Success(js) => JsSuccess(js)
+        case scala.util.Failure(ex) => annotateWithCSVErrorInfos(path, JsError(ex.getMessage), row)
+      }
+
     pathBuilderSpecs.map { pathBuilderSpec =>
-      val builder = {
-        (row: CSVRow, path: String) =>
-          // TODO: why try with both?
-          row.getColumnData(pathBuilderSpec._1.csvPath) match {
-            case Some(data) => pathBuilderSpec._2(data)
-            case None => row.getColumnData(path) match {
-              case Some(data) => pathBuilderSpec._2(data)
-              case None if schema.isOptional(path) => JsUndefined("Ignored optional path")
-              case None =>CSVColumnUtil.getColumnData(path)(row); JsUndefined("Can't find the Path.") // this will throw an appropriate Exception.
-            }
+      val builder: CSVPathBuilder = {
+        (row: CSVRow, resolvedCsvPath: String) =>
+          pathBuilderSpec._1 match {
+            case MappedPath(schemaPath, csvPath) =>  applyPathBuilder(schema, toJsResult(pathBuilderSpec._2, row, csvPath), row, csvPath)
+            case _ => applyPathBuilder(schema, toJsResult(pathBuilderSpec._2, row, resolvedCsvPath), row, resolvedCsvPath)
           }
       }
       (pathBuilderSpec._1.schemaPath, builder)
     }.toMap
+  }
 
+  def toPathBuilders(schema: QBClass,
+                     pathBuilderSpecs: Seq[(PathSpec, String => JsResult[JsValue])]): Map[String, CSVPathBuilder] = {
 
+    pathBuilderSpecs.map { pathBuilderSpec =>
+      val builder: CSVPathBuilder = {
+        (row: CSVRow, resolvedCsvPath: String) =>
+          pathBuilderSpec._1 match {
+            case MappedPath(schemaPath, csvPath) =>  applyPathBuilder(schema, pathBuilderSpec._2, row, csvPath)
+            case _ => applyPathBuilder(schema, pathBuilderSpec._2, row, resolvedCsvPath)
+          }
+      }
+      (pathBuilderSpec._1.schemaPath, builder)
+    }.toMap
+  }
+
+  def applyPathBuilder(schema: QBClass, pathBuilderSpec: (String) => JsResult[JsValue], row: CSVRow, resolvedCsvPath: String): JsResult[JsValue] = {
+
+    row.getColumnData(resolvedCsvPath) match {
+      case Some(data) => pathBuilderSpec(data) match {
+        case jsError@JsError(_) => annotateWithCSVErrorInfos(resolvedCsvPath, jsError, row)
+        case success@JsSuccess(_, _) => success
+      }
+      case None if schema.isOptional(resolvedCsvPath) => JsSuccess(JsUndefined("Ignored optional path"))
+      case None => annotateWithCSVErrorInfos(resolvedCsvPath, JsError(s"Can't find the path $resolvedCsvPath"), row)
+    }
+  }
+
+  def annotateWithCSVErrorInfos(path: String, jsError: JsError, row: CSVRow): JsError = {
+    JsError(jsError.errors.map(pathWithError => (pathWithError._1, pathWithError._2.map(validationError =>
+      ValidationError(validationError.message, CSVErrorInfo(row.resourceIdentifier, row.rowNr, path))) // TODO: try to keep existing args
+      )
+    ))
   }
 }
