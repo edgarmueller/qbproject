@@ -132,7 +132,7 @@ object CSVImporterSpec extends Specification {
      * Tests ---
      */
 
-    "perform basic joins" in {
+    "perform parsing" in {
       val companies = CSVImporter(Schemas.basic.companySchema keep ("id", "company")).parse(
         QBResource("companies.csv", mkInputStream(Data.basic.companyData))
       )
@@ -164,7 +164,7 @@ object CSVImporterSpec extends Specification {
 
       val companies = CSVImporter(Schemas.basic.companySchema.keep("id", "company")).parse(
         "root.csv"
-        )(
+      )(
           "company" -> resource("companies.csv", "id")
         )(resourceSet)
 
@@ -180,7 +180,7 @@ object CSVImporterSpec extends Specification {
       ))
     }
 
-    "allow joins on multi attributes" in {
+    "allow many to one joins with mapped multivalued property" in {
       val rangeRegex = "([0-9]+)\\s*-\\s*([0-9]+)".r
 
       val companyResource = QBResource("companies.csv", mkInputStream(Data.extended.companyData))
@@ -191,10 +191,11 @@ object CSVImporterSpec extends Specification {
 
       val jsResults = CSVImporter(Schemas.extended.companySchema,
         "range"--> {
-          case rangeRegex(start, end) => Json.obj("start" -> start.toInt, "end" -> end.toInt)
+          case rangeRegex(start, end) => JsSuccess(Json.obj("start" -> start.toInt, "end" -> end.toInt))
+          case _ => JsError("Wrong format")
         },
         "employees".maps("company.employees") --> {
-          case employees: String => JsArray(employees.split(",").toList.map(JsString))
+          case employees: String => JsSuccess(JsArray(employees.split(",").toList.map(JsString)))
         }).parse("companies.csv")(
           "features" -> resource("features.csv", "id"),
           "products" -> resource("products.csv", "id"),
@@ -542,7 +543,7 @@ object CSVImporterSpec extends Specification {
         "array" -> qbList(qbString))
 
       val importer = CSVImporter(schema, "array" --> {
-        case x: String => JsArray(x.split("\n").map(JsString))
+        case arr: String => JsArray(arr.split("\n").map(JsString))
       })
 
       val result = importer.parse(QBResource("resource", mkInputStream(csv)))
@@ -566,8 +567,8 @@ object CSVImporterSpec extends Specification {
 
       val importer = CSVImporter(schema,
         "array" --> {
-          case x: String =>
-            val fieldsList = x.split("\n").toList.map(_.split("//").toList)
+          case s: String =>
+            val fieldsList = s.split("\n").toList.map(_.split("//").toList)
             JsArray(fieldsList.map(fields => jsonObj(arrayItem, fields)))
         })
 
@@ -625,6 +626,76 @@ object CSVImporterSpec extends Specification {
       ))
     }
 
+    "allow path constructors to fail" in {
+      val csvData = """name;age
+                      |Max;35
+                      |;26
+                      |;31""".stripMargin
+
+      val personSchema = qbClass(
+        "name" -> qbString,
+        "age"  -> qbInteger
+      )
+
+      val csvImporter = CSVImporter(personSchema,
+        "name" --> {
+          case name: String if name.isEmpty => JsError("Person name must not be empty")
+          case name: String => JsSuccess(JsString(name.toUpperCase))
+        }
+      )
+
+      val result: Either[QBCSVErrorMap, List[JsValue]] = csvImporter.parse(QBResource("person-resource", mkInputStream(csvData)))
+
+      result must beLeft
+      // TODO: too many gets
+      result.left.get.errors.get("person-resource").get must have size 2
+      result.left.get.errors.get("person-resource").get.collect { case err@QBCSVDataError(msg, _, _, _) if
+        msg == "Person name must not be empty" => err } must have size 2
+    }
+
+    // TODO: rename description
+
+    "allow syntax sugar for path builders" in {
+      val csvData = """name;age
+                      |Max;35
+                      |alex;26
+                      |stefan;31""".stripMargin
+
+      val personSchema = qbClass(
+        "name" -> qbString,
+        "age"  -> qbInteger
+      )
+
+      val csvImporter = CSVImporter(personSchema,
+        "name" --> { case name: String if !name.isEmpty => JsString(name.toUpperCase) }
+      )
+
+      val result: Either[QBCSVErrorMap, List[JsValue]] = csvImporter.parse(QBResource("person-resource", mkInputStream(csvData)))
+      result must beRight
+      result.right.get(0) must beEqualTo (Json.obj("name" -> "MAX", "age" -> JsNumber(35)))
+    }
+
+    "allow syntax sugar-built path builders to fail" in {
+      val csvData = """name;age
+                      |Max;35
+                      |alex;26
+                      |stefan;31x""".stripMargin
+
+      val personSchema = qbClass(
+        "name" -> qbString,
+        "age"  -> qbInteger
+      )
+
+      val csvImporter = CSVImporter(personSchema,
+        "age" --> { case age: String => JsNumber(Integer.parseInt(age)) }
+      )
+
+      val result: Either[QBCSVErrorMap, List[JsValue]] = csvImporter.parse(QBResource("person-resource", mkInputStream(csvData)))
+      result must beLeft
+      result.left.get.errors.get("person-resource").get must have size 1
+    }
+
+
     "allow path constructors to bind to arrays" in {
 
       val csv =
@@ -643,8 +714,8 @@ object CSVImporterSpec extends Specification {
 
       val importer = CSVImporter(schema,
         "persons[].age" --> {
-          case x: String =>
-            x.split("\\|").map(JsString).foldLeft(JsArray()){
+          case s: String =>
+            s.split("\\|").map(JsString).foldLeft(JsArray()){
               (array, number) =>
                 array.append(number)
             }

@@ -3,17 +3,28 @@ package org.qbproject.schema.internal
 import org.qbproject.schema._
 import play.api.libs.json._
 
+/**
+ * Common base trait for all adapters that are capable of converting input of type I
+ * to a JsValue.
+ *
+ * @tparam I the input type
+ */
 trait QBAdapter[I] {
 
-  type PathBuilder = (I, String) => JsValue
+  // TODO: String is the resolved path --> provide tag?
+  type PathBuilder = (I, String) => JsResult[JsValue]
 
   def adapt(schema: QBClass)(root: I): JsResult[JsValue] = atObject(schema, JsPath(), Seq.empty)(root)
 
+  /**
+   * Maps schema paths to path builders.
+   */
+  // TODO: provide type synoym for String key
   def pathBuilders: Map[String, PathBuilder] = Map.empty
 
   def convert(qbType: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
     (pathBuilders.get(createComparablePath(path)), qbType) match {
-      case (Some(builder), _) => JsSuccess(builder(root, resolvePath(path)))
+      case (Some(builder), _) => builder(root, resolvePath(path))
       case (None, arr: QBArray) => atArray(arr, path, annotations)
       case (None, obj: QBClass) => atObject(obj, path, annotations)
       case (None, schema: QBPrimitiveType[_]) => atPrimitive(schema, path, annotations)

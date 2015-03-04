@@ -1,6 +1,7 @@
 language: scala
-script: "sbt test"
-scala:
-- "2.10.2"
+script: "sbt clean coverage test"
+after_success: "sbt coveralls"
+   - 2.10.4
+   - 2.11.2
 jdk:
-- oraclejdk7
+   - oraclejdk7

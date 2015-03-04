@@ -81,7 +81,7 @@ class CSVErrorAggregationSpec extends Specification {
       val resourceSet = QBResourceSet(companyResource, productResource)
 
       val result = QBCSVValidator(companySchema,
-        "products.colors" --> { case cell: String => Json.arr(cell.split(',').toList) }
+        "products.colors" --> { case cell => Json.arr(cell.split(',').toList) }
       ).parse("companies.csv")(
           "products.options" -> resource("products.csv", "id")
         )(resourceSet)
