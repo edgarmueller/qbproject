@@ -3,7 +3,6 @@ import sbt._
 import sbt.Keys._
 import com.typesafe.sbteclipse.plugin.EclipsePlugin._
 import bintray.Plugin._
-import scoverage.ScoverageSbtPlugin
 import sbtrelease.ReleasePlugin
 import sbtrelease.ReleasePlugin._
 
@@ -103,9 +102,7 @@ object QBBuild extends Build {
   )
 
 
-  val commonSettings = Seq(ScoverageSbtPlugin.instrumentSettings:_*) ++
-    Seq(CoverallsPlugin.coverallsSettings:_*) ++
-    Seq(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*) ++
+  val commonSettings = Seq(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*) ++
     Seq(
       organization := "org.qbproject",
       scalaVersion := "2.11.2",
