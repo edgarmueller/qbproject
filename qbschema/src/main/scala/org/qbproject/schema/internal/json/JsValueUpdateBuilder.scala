@@ -81,7 +81,7 @@ case class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolea
    * @return a Seq containing tuples of the matched type and its JsPath
    */
   def matchedPaths(input: JsValue): Seq[(QBType, JsPath)] = {
-    processor.process(schema, QBPath(), input)(JsFilterVisitor(matcher))
+    processor.process(schema, QBPath(), input, JsFilterVisitor(matcher))
              .getOrElse(List.empty).map(pair => pair._1 -> pair._2.toJsPath)
   }
 

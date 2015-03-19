@@ -21,7 +21,7 @@ trait QBValidator  {
   val processor = JsDefaultValueProcessor()
 
   def validate[J <: JsValue](schema: QBType)(input: J): JsResult[J] =
-    processor.process(schema, QBPath(), input)(validationInstance).asInstanceOf[JsResult[J]]
+    processor.process(schema, QBPath(), input, validationInstance).asInstanceOf[JsResult[J]]
 
 }
 
