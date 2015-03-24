@@ -36,7 +36,7 @@ class JsVisitorExtensionsSpec extends Specification {
         QBAttribute("s", QBStringImpl(), List(QBOptionalAnnotation(Some(JsString("foo"))), QBReadOnlyAnnotation()))
       ))
       val instance = Json.obj()
-      val result = processor.process(schema)(instance)(JsValidationVisitor())
+      val result = processor.process(schema)(instance, JsValidationVisitor())
       result.get \ "s" must beEqualTo(JsString("foobar"))
     }
   }

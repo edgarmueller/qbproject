@@ -133,7 +133,6 @@ trait QBSchemaDSL {
   /**
    * DSL helper class
    */
-  case class AnnotatedQBType(qbType: QBType, annotations: List[QBAnnotation]) extends QBType
 
   /**
    * Annotations

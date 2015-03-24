@@ -5,7 +5,7 @@ import play.api.libs.json._
 /**
  * Marker for all QBValue types.
  */
-trait QBType
+sealed trait QBType
 
 object QBType {
 
@@ -217,7 +217,7 @@ case class QBForeignKeyAnnotation() extends QBAnnotation
 /**
  * DSL helper class
  */
-case class AnnotatedQBType(qbType: QBType, annotations: Seq[QBAnnotation]) extends QBType
+case class AnnotatedQBType(qbType: QBType, annotations: List[QBAnnotation]) extends QBType
 
 /**
  * ----------------------------------------------------------
