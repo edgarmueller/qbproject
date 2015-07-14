@@ -5,9 +5,8 @@ import org.qbproject.schema.{QBArray, QBClass, QBType}
 
 object QBSchemaUtil {
 
-  def isNotNullOrUndefined(input: JsValue) = input match {
+  def isNotNull(input: JsValue) = input match {
     case _: JsNull.type => false
-    case _: JsUndefined => false
     case _ => true
   }
 
@@ -24,7 +23,6 @@ object QBSchemaUtil {
     case _: JsBoolean => "boolean"
     case _: JsObject => "object"
     case _: JsArray => "array"
-    case _: JsUndefined => "undefined"
     case JsNull => "null"
     case _ => "<no type>"
   }

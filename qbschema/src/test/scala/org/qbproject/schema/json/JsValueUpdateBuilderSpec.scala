@@ -9,7 +9,6 @@ import org.qbproject.schema._
 import org.qbproject.schema.internal.json.JsValueUpdateBuilder
 import org.specs2.mutable.Specification
 import play.api.libs.json.{JsNumber, JsObject, JsString, _}
-import play.api.libs.json.extensions.JsExtensions
 
 class JsValueUpdateBuilderSpec extends Specification {
 
@@ -64,8 +63,8 @@ class JsValueUpdateBuilderSpec extends Specification {
           "e" -> 5)))
 
       val updatedObject = JsValueUpdateBuilder(schema).byType[QBInteger](inc(1)).go(instance)
-      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsNumber(5))
-      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsNumber(6))
+      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsDefined(JsNumber(5)))
+      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsDefined(JsNumber(6)))
     }
 
     "find and increment integers in an array via map" in {
@@ -73,8 +72,8 @@ class JsValueUpdateBuilderSpec extends Specification {
         isQBInteger -> { case JsNumber(n) => JsNumber(n + 1) }
       )
 
-      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsNumber(5))
-      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsNumber(6))
+      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsDefined(JsNumber(5)))
+      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsDefined(JsNumber(6)))
     }
 
     "find and increment integers in an array via builder" in {
@@ -100,7 +99,7 @@ class JsValueUpdateBuilderSpec extends Specification {
 
       val updatedObject = builder.go(instance)
 
-      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsString(now))
+      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsDefined(JsString(now)))
     }
 
     "find and increment integers in an array via builder directly" in {
@@ -123,14 +122,14 @@ class JsValueUpdateBuilderSpec extends Specification {
 
       val updatedObject = builder.go(instance)
 
-      (updatedObject \ "x")(0) must beEqualTo(JsString(now))
+      (updatedObject \ "x")(0) must beEqualTo(JsDefined(JsString(now)))
     }
 
     "find and uppercase all strings via toUpperCase" in {
       val updatedObject = schema.transform(instance) {
         isQBString -> toUpperCase
       }
-      (updatedObject \ "o") must beEqualTo(JsString("FOO"))
+      (updatedObject \ "o") must beEqualTo(JsDefined(JsString("FOO")))
     }
 
     "find and convert numbers to strings" in {
@@ -138,9 +137,9 @@ class JsValueUpdateBuilderSpec extends Specification {
         isQBInteger -> { case JsNumber(n) => JsString(n.intValue().toString) },
         isQBString -> toUpperCase
       )
-      (updatedObject \ "o") must beEqualTo(JsString("FOO"))
-      (updatedObject \ "x")(0) \ "d" must beAnInstanceOf[JsString]
-      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsString("4"))
+      (updatedObject \ "o") must beEqualTo(JsDefined(JsString("FOO")))
+      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsDefined(JsString("4")))
+      ((updatedObject \ "x")(0) \ "d").get must beAnInstanceOf[JsString]
     }
 
     "find and uppercase all strings and increment all ints via mapping builder" in {
@@ -150,11 +149,11 @@ class JsValueUpdateBuilderSpec extends Specification {
         case JsNumber(n) => JsNumber(n + 1)
       }
       val updatedObject = mappingBuilder.go(instance)
-      (updatedObject \ "o") must beEqualTo(JsString("FOO"))
-      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsNumber(5))
-      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsNumber(6))
+      (updatedObject \ "o") must beEqualTo(JsDefined(JsString("FOO")))
+      (updatedObject \ "x")(0) \ "d" must beEqualTo(JsDefined(JsNumber(5)))
+      (updatedObject \ "x")(0) \ "e" must beEqualTo(JsDefined(JsNumber(6)))
     }
-    
+
     "convert datetime and posixtime dates to string" in {
       val date = new DateTime(2000,1,1,1,1)
       val expected = "01.01.2000"
@@ -167,11 +166,11 @@ class JsValueUpdateBuilderSpec extends Specification {
         "e" -> qbPosixTime)
 
       val sampleJson = Json.obj(
-        "d" -> dateString, 
+        "d" -> dateString,
         "e" -> dateMillis)
 
       val expectedJson = Json.obj(
-        "d" -> expected, 
+        "d" -> expected,
         "e" -> expected)
 
       def formatDate(date: DateTime) = DateTimeFormat.forPattern("dd.MM.yyyy").print(date)
@@ -185,7 +184,7 @@ class JsValueUpdateBuilderSpec extends Specification {
         }
 
       transformer.go(sampleJson) must beEqualTo(expectedJson)
-    } 
+    }
 
     "distinguish posixdates and numbers" in {
       val date = new DateTime(2000,1,1,1,1)
@@ -200,7 +199,7 @@ class JsValueUpdateBuilderSpec extends Specification {
         "n" -> 1)
 
       val expectedJson = Json.obj(
-        "e" -> "01.01.2000", 
+        "e" -> "01.01.2000",
         "n" -> 2)
 
       def formatDate(date: DateTime) = DateTimeFormat.forPattern("dd.MM.yyyy").print(date)
@@ -214,6 +213,6 @@ class JsValueUpdateBuilderSpec extends Specification {
         }
 
       transformer.go(sampleJson) must beEqualTo(expectedJson)
-    } 
+    }
   }
 }

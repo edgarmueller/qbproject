@@ -7,8 +7,7 @@ import sbtrelease.ReleasePlugin
 import sbtrelease.ReleasePlugin._
 
 object Version {
-  val jsonZipper    = "1.2"
-  val play          = "2.3.3"
+  val play          = "2.4.2"
   val openCsv       = "2.1"
   val reactiveMongo = "0.10.5.0.akka23"
   val scalaz        = "7.0.6"
@@ -21,7 +20,6 @@ object Version {
 
 object Library {
 
-  val jsonZipper    = "com.mandubian"     %% "play-json-zipper"       % Version.jsonZipper
   val openCsv       = "net.sf.opencsv"    %  "opencsv"                % Version.openCsv
   val sprayCan      = "io.spray"          %% "spray-can"              % Version.spray
   val sprayHttp     = "io.spray"          %% "spray-http"             % Version.spray
@@ -43,7 +41,6 @@ object Dependencies {
 
   val qbSchema = List(
     playJson,
-    jsonZipper,
     scalaz,
     scalameter,
     specs2
@@ -52,7 +49,6 @@ object Dependencies {
   val qbPlay = List(
     play,
     playTest,
-    jsonZipper,
     scalameter,
     specs2
   )
@@ -135,7 +131,7 @@ object QBBuild extends Build {
       unmanagedSourceDirectories in Test    <+= baseDirectory(new File(_, "src/test/scala")),
       retrieveManaged := true
     )
-    .aggregate(schemaProject, mongoProject, playProject, csvProject)
+    .aggregate(schemaProject)
 
   lazy val schemaProject = Project("qbschema", file("qbschema"))
     .settings(buildSettings: _*)
@@ -146,69 +142,5 @@ object QBBuild extends Build {
       libraryDependencies ++= Dependencies.qbSchema,
       testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
     )
-
-  lazy val mongoProject = Project("qbmongo", file("qbmongo"))
-    .settings(buildSettings: _*)
-    .settings(releaseSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      retrieveManaged := true,
-      libraryDependencies ++= Dependencies.qbMongo
-    ).dependsOn(schemaProject)
-
-  lazy val playProject = Project("qbplay", file("qbplay"))
-    .settings(buildSettings: _*)
-    .settings(releaseSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      retrieveManaged := true,
-      libraryDependencies ++= Dependencies.qbPlay,
-      testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
-    ).dependsOn(schemaProject, mongoProject)
-
-
-  lazy val csvProject = Project("qbcsv", file("qbcsv"))
-    .settings(buildSettings: _*)
-    .settings(releaseSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      retrieveManaged := true,
-      libraryDependencies ++= Dependencies.qbCsv
-    ).dependsOn(schemaProject)
-
-  /** TODO: assets.jar has been published manually, can we do better? **/
-  lazy val qbForms = Project("qbforms", file("qbforms"))
-//    .enablePlugins(play.PlayScala)
-    .settings(commonSettings: _*)
-    .settings(releaseSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      retrieveManaged := true,
-      PlayKeys.generateRefReverseRouter := false,
-      libraryDependencies ++= Dependencies.qbForms
-    ).dependsOn(schemaProject, playProject)
-
-  lazy val playSampleProject =  Project("qbplay-sample", file("qbplay-sample"))
-//    .enablePlugins(play.PlayScala)
-    .settings(releaseSettings: _*)
-    .settings(commonSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      libraryDependencies ++= Dependencies.sample
-    ).dependsOn(schemaProject,playProject,qbForms)
-    .aggregate(schemaProject,playProject,qbForms)
-
-  // TODO: extract mongo wrapper into own bundle to avoid dependency to qbPlay
-  lazy val akkaSampleProject =  Project("qbakka-sample", file("qbakka-sample"))
-    .settings(releaseSettings: _*)
-    .settings(commonSettings: _*)
-    .settings(
-      resolvers ++= QBRepositories,
-      libraryDependencies ++= Dependencies.akkaSample,
-      mainClass in Compile := Some("org.qbproject.sample.akka.Boot")
-    ).dependsOn(schemaProject, playProject)
-    .aggregate(schemaProject, playProject)
-
-
 
 }

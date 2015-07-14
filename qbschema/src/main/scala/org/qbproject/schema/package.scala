@@ -29,12 +29,8 @@ package object schema {
 
   implicit class JsObjectExtensions(jsObject: JsObject) {
     def get(fieldName: String): Option[JsValue] = {
-      val jsValue = jsObject \ fieldName
-      if (jsValue.isInstanceOf[JsUndefined]) {
-        None
-      } else {
-        Some(jsValue)
-      }
+      val jsValue: JsLookupResult = jsObject \ fieldName
+      jsValue.toOption
     }
   }
 

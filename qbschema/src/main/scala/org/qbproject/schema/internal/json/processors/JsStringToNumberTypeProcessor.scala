@@ -26,8 +26,8 @@ case object JsStringToNumberTypeProcessor extends TypeProcessor {
    */
   def process(qbType: QBType, number: JsValue, path: QBPath): JsResult[JsValue] = {
     qbType match {
-      case n: QBNumber if !number.isInstanceOf[JsUndefined]=> convertToNumber(n, path, number)
-      case i: QBInteger if !number.isInstanceOf[JsUndefined] => convertToInteger(i, path, number)
+      case n: QBNumber => convertToNumber(n, path, number)
+      case i: QBInteger => convertToInteger(i, path, number)
       case x => JsError(path.toJsPath, "qb.error.tolerant.number.unmatched" + x + "//" + number)
     }
   }

@@ -55,7 +55,7 @@ object JsValidationSpec extends Specification {
         "o" -> "o",
         "e" -> 23)
 
-      QBValidator.validate(schema)(instance).asOpt.get \ "d" must beEqualTo(JsNumber(42))
+      QBValidator.validate(schema)(instance).asOpt.get \ "d" must beEqualTo(JsDefined(JsNumber(42)))
     }
 
     "test optional base type without default" in {
@@ -129,7 +129,7 @@ object JsValidationSpec extends Specification {
         "e" -> 23,
         "d" -> 14)
 
-      QBValidator.validate(schema)(instance).asOpt.get \ "d" must beEqualTo(JsNumber(14))
+      QBValidator.validate(schema)(instance).asOpt.get \ "d" must beEqualTo(JsDefined(JsNumber(14)))
     }
 
     "test optional with default" in {
@@ -142,7 +142,7 @@ object JsValidationSpec extends Specification {
         "e" -> 23)
 
       val result = QBValidator.validate(schema)(instance)
-      result.asOpt.get \ "d" must beEqualTo(JsNumber(11))
+      result.asOpt.get \ "d" must beEqualTo(JsDefined(JsNumber(11)))
     }
 
     "test optional nested in an optional object where parent is not set" in {
@@ -197,8 +197,7 @@ object JsValidationSpec extends Specification {
       )
 
       val instance = JsObject(Seq(
-        "o" -> JsString(""),
-        "e" -> JsUndefined("")
+        "o" -> JsString("")
       ))
 
       QBValidator.validate(schema)(instance).asOpt must beSome

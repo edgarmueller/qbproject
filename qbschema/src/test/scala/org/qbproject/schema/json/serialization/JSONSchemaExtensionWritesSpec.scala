@@ -7,9 +7,7 @@ import scala.math.BigDecimal.int2bigDecimal
 import org.qbproject.schema.internal._
 import org.qbproject.schema.{QBType, QBSchema}
 import QBSchema._
-import play.api.libs.json.Json
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsString
+import play.api.libs.json.{JsDefined, Json, JsNumber, JsString}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 @RunWith(classOf[JUnitRunner])
@@ -22,8 +20,8 @@ object JSONSchemaExtensionWritesSpec extends Specification {
         "n" -> default(qbNumber, JsNumber(3)),
         "o" -> readOnly(qbNumber))
       val jsonSchema = Json.toJson(qbSchema)(qbTypeWriter)
-      (jsonSchema \ "properties" \ "n" \ "default") must beEqualTo(JsNumber(3))
-      (jsonSchema \ "properties" \ "o" \ "readonly") must beEqualTo(JsString("true"))
+      (jsonSchema \ "properties" \ "n" \ "default") must beEqualTo(JsDefined(JsNumber(3)))
+      (jsonSchema \ "properties" \ "o" \ "readonly") must beEqualTo(JsDefined(JsString("true")))
     }
 
     /**

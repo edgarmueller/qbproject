@@ -16,7 +16,7 @@ object DSLSpec extends Specification {
     "have a posix time type" in {
       val currentTime = System.currentTimeMillis() / 1000L
       val instance = Json.obj("time" -> currentTime)
-      QBValidator.validate(schema)(instance).get \ "time" must beEqualTo(JsNumber(currentTime))
+      QBValidator.validate(schema)(instance).get \ "time" must beEqualTo(JsDefined(JsNumber(currentTime)))
     }
 
     "not validate posix time instances with a double value set" in {

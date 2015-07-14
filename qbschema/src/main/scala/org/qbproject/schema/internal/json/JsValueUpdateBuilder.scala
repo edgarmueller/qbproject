@@ -3,7 +3,6 @@ package org.qbproject.schema.internal.json
 import org.qbproject.schema.QBType
 import org.qbproject.schema.internal.visitor._
 import play.api.libs.json._
-import play.api.libs.json.extensions.JsExtensions
 
 import scala.reflect.ClassTag
 
@@ -94,16 +93,34 @@ case class JsValueUpdateBuilder(schema: QBType, mappings: List[(QBType => Boolea
    */
   def go(input: JsObject): JsObject = {
 
-    val mp = matchedPaths(input)
+    val mp: Seq[(QBType, JsPath)] = matchedPaths(input)
 
     mp.foldLeft(input)((obj, pair) => {
       val updater = getByType(pair._1).get._2
-      obj.get(pair._2) match {
-        case _: JsUndefined =>
-          obj
-        case value =>
-          obj.set((pair._2, updater(value))).asInstanceOf[JsObject]
+      get(pair._2, obj) match {
+        case JsError(_) => input
+        case JsSuccess(value, _) => updated(pair._2.path, obj, updater(value)).asInstanceOf[JsObject]
       }
     })
+  }
+
+  private def get(path: JsPath, obj: JsValue): JsResult[JsValue] = {
+    obj.transform(path.json.pick)
+  }
+
+
+  private def updated(nodes: Seq[play.api.libs.json.PathNode], json: JsValue, newValue: JsValue): JsValue = {
+    nodes.headOption match {
+      case Some(node) => node match {
+        case KeyPathNode(key) => (json \ key).toOption.fold(json)(value =>
+          json.asInstanceOf[JsObject] ++ Json.obj(key ->  updated(nodes.tail, value, newValue))
+        )
+        case IdxPathNode(idx) =>
+          val arr = json.asInstanceOf[JsArray]
+          val value = arr.value(idx)
+          JsArray(arr.value.take(idx) ++ Seq(updated(nodes.tail, value, newValue)) ++ arr.value.drop(idx + 1))
+      }
+      case None => newValue
+    }
   }
 }

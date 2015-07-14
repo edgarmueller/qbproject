@@ -6,12 +6,10 @@ import org.qbproject.schema.internal._
 import org.qbproject.schema._
 import QBSchema._
 import org.qbproject.schema.internal.visitor.{Visitor, QBPath, JsValueProcessor, AnnotationProcessor}
-import play.api.libs.json.{Json, JsString, JsObject, JsValue}
+import play.api.libs.json._
 import org.specs2.mutable.Specification
 import org.qbproject.schema.internal.visitor.QBPath
 import org.qbproject.schema.QBStringImpl
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
 import scala.Some
 
 class ReadOnlyAnnotationVisitorExtension extends AnnotationProcessor {
@@ -37,7 +35,7 @@ class JsVisitorExtensionsSpec extends Specification {
       ))
       val instance = Json.obj()
       val result = processor.process(schema)(instance, JsValidationVisitor())
-      result.get \ "s" must beEqualTo(JsString("foobar"))
+      result.get \ "s" must beEqualTo(JsDefined(JsString("foobar")))
     }
   }
 

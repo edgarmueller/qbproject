@@ -78,7 +78,6 @@ case class JsValueProcessor(annotationProcessors: Map[Class[_], AnnotationProces
         case (jsInt:    JsNumber,    qbInt: QBInteger) => visitor.atPrimitive(qbInt, jsInt, path)
         case (jsArray:  JsArray,   qbArray: QBArray)   => processArray(qbArray,   path, jsArray, visitor)
         case (jsObject: JsObject, qbObject: QBClass)   => processObject(qbObject, path, jsObject, visitor)
-        case (jsUndefined: JsUndefined, _) => JsError(path.toJsPath, "qb.value.not.found")
         case _ => JsError(path.toJsPath, "qb.incompatible.types"
           + "[expected: " + schema.toString
           +     ", was: " + QBSchemaUtil.mapJsValueToTypeName(input) + "]")

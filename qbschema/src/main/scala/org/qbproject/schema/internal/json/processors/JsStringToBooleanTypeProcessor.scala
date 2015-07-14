@@ -12,7 +12,7 @@ case object JsStringToBooleanTypeProcessor extends TypeProcessor {
 
   override def process(qbType: QBType, input: JsValue, path: QBPath): JsResult[JsValue] = {
     qbType match {
-      case b: QBBoolean if !input.isInstanceOf[JsUndefined]=> convertToBoolean(b, path, input)
+      case b: QBBoolean => convertToBoolean(b, path, input)
       case _ => JsError(path.toJsPath, "qb.error.tolerant.boolean.unmatched")
     }
   }

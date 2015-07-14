@@ -12,9 +12,9 @@ import play.api.libs.json._
 trait QBAdapter[I] {
 
   // TODO: String is the resolved path --> provide tag?
-  type PathBuilder = (I, String) => JsResult[JsValue]
+  type PathBuilder = (I, String) => JsResult[Option[JsValue]]
 
-  def adapt(schema: QBClass)(root: I): JsResult[JsValue] = atObject(schema, JsPath(), Seq.empty)(root)
+  def adapt(schema: QBClass)(root: I): JsResult[Option[JsValue]] = atObject(schema, JsPath(), Seq.empty)(root)
 
   /**
    * Maps schema paths to path builders.
@@ -22,7 +22,7 @@ trait QBAdapter[I] {
   // TODO: provide type synoym for String key
   def pathBuilders: Map[String, PathBuilder] = Map.empty
 
-  def convert(qbType: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
+  def convert(qbType: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[Option[JsValue]] = {
     (pathBuilders.get(createComparablePath(path)), qbType) match {
       case (Some(builder), _) => builder(root, resolvePath(path))
       case (None, arr: QBArray) => atArray(arr, path, annotations)
@@ -42,7 +42,7 @@ trait QBAdapter[I] {
     })
   }
 
-  def atObject[A](schema: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue] = {
+  def atObject[A](schema: QBType, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[Option[JsValue]] = {
     schema match {
       case obj: QBClass =>
         val fields = obj.attributes.map(attr => attr.name -> convert(attr.qbType, path \ attr.name, attr.annotations))
@@ -51,18 +51,18 @@ trait QBAdapter[I] {
         if (fields.exists(_._2.asOpt.isEmpty)) {
           JsError(fields.collect { case (p, JsError(err)) => err }.reduceLeft(_ ++ _))
         } else {
-          JsSuccess(JsObject(fields.collect {
-            case (fieldName, JsSuccess(res, _)) if !res.isInstanceOf[JsUndefined] =>
+          JsSuccess(Some(JsObject(fields.collect {
+            case (fieldName, JsSuccess(Some(res), _)) =>
               (fieldName, res)
-          }))
+          })))
         }
       case q => convert(q, path, Seq.empty)
     }
   }
 
-  def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue]
+  def atPrimitive[A <: QBPrimitiveType[_]](schema: A, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[Option[JsValue]]
 
-  def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[JsValue]
+  def atArray(schema: QBArray, path: JsPath, annotations: Seq[QBAnnotation])(implicit root: I): JsResult[Option[JsValue]]
 
   // note this conforms with default split strategy
   def resolvePath(path: JsPath): String
